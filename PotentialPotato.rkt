@@ -25,12 +25,16 @@
     [`(,rator ,rand)
      (do-ap (val ρ rator) (val ρ rand))]))
 
-; clos : value?
+
+; fun : value?
 ; arg : value?
-(define (do-ap clos arg)
-  (match clos
+(define (do-ap fun arg)
+  (match fun
     [(CLOS ρ x b)
-     (val (extend ρ x arg) b)]))
+     (val (extend ρ x arg) b)]
+    ; If the argument is neutral, construct a bigger neutral expression.
+    [neutral-fun
+     (N-ap fun arg)]))
 
 ; exprs : (listof expression?)
 (define (run-program ρ exprs)
@@ -49,3 +53,38 @@
   (string->symbol
    (string-append (symbol->string x)
                   "*")))
+
+; used : (listof symbol?)
+; x : symbol?
+
+(define (freshen used x)
+  (if (memv x used)
+      (freshen used (add-* x))
+      x))
+
+; name : symbol?
+(struct N-var (name))
+
+;rator : neutral?
+;rand : value?
+(struct N-ap (rator rand))
+
+; used-names : (listof symbol?)
+; v : value?
+(define (read-back used-names v)
+  (match v
+    [(CLOS ρ x body)
+     (let* ((y (freshen used-names x))
+            (neutral-y (N-var y)))
+       `(λ (,y)
+          ,(read-back (cons y used-names)
+                      (val (extend ρ x neutral-y) body))))]
+    [(N-var x) x]
+    [(N-ap rator rand)
+     `(,(read-back used-names rator) ,(read-back used-names rand))]))
+
+(define (norm ρ e)
+  (read-back '() (val ρ e)))
+
+
+
