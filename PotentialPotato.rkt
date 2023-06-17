@@ -32,5 +32,20 @@
     [(CLOS ρ x b)
      (val (extend ρ x arg) b)]))
 
+; exprs : (listof expression?)
+(define (run-program ρ exprs)
+  (match exprs
+    ['() (void)]
+    [(cons `(define ,x ,e) rest)
+     (let ([v (val ρ e)])
+       (run-program (extend ρ x v) rest))]
+    [(cons e rest)
+     (displayln (val ρ e))
+     (run-program ρ rest)]))
 
 
+; x : symbol?
+(define (add-* x)
+  (string->symbol
+   (string-append (symbol->string x)
+                  "*")))
