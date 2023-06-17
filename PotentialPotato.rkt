@@ -36,15 +36,16 @@
     [neutral-fun
      (N-ap fun arg)]))
 
+; ρ : (listof (pair symbol? value?))
 ; exprs : (listof expression?)
 (define (run-program ρ exprs)
   (match exprs
-    ['() (void)]
-    [(cons `(define ,x ,e) rest)
+    [(list) (void)]
+    [(list `(define ,x ,e) rest ...)
      (let ([v (val ρ e)])
        (run-program (extend ρ x v) rest))]
-    [(cons e rest)
-     (displayln (val ρ e))
+    [(list e rest ...)
+     (displayln (norm ρ e))
      (run-program ρ rest)]))
 
 
