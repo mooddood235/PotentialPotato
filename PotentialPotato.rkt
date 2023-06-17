@@ -87,5 +87,37 @@
 (define (norm ρ e)
   (read-back '() (val ρ e)))
 
+; e : expression?
+(define (with-numerals e)
+  `((define church-zero
+      (λ (f)
+        (λ (x)
+          x)))
+    (define church-add1
+      (λ (n-1)
+        (λ (f)
+          (λ (x)
+            (f ((n-1 f) x))))))
+    ,e))
+
+; n : exact-nonnegative-integer?
+(define (to-church n)
+  (cond [(zero? n) 'church-zero]
+        [(positive? n)
+         (let ([church-of-n-1 (to-church (sub1 n))])
+           `(church-add1 ,church-of-n-1))]))
+
+(define church-add
+  `(λ (j)
+     (λ (k)
+       (λ (f)
+         (λ (x)
+           ((j f) ((k f) x)))))))
+
+
+
+
+
+
 
 
