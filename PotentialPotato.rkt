@@ -217,3 +217,17 @@
                          t2
                          t))))]))
 
+; Γ : context?
+; prog : (listof (or/c expression? (list/c 'define symbol? expression?)))
+(define (check-program Γ prog)
+  (match prog
+    ['()
+     (go Γ)]
+    [(cons `(define ,x ,e) rest)
+     (go-on ([t (synth Γ e)])
+       (check-program (extend Γ x t) rest))]
+    [(cons e rest)
+     (go-on ([t (synth Γ e)])
+       (begin
+         (printf "~a has type ~a\n" e t)
+         (check-program Γ rest)))]))
