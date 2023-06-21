@@ -153,8 +153,67 @@
 (define (type? t)
   (type=? t t))
 
+; Γ : context?
+; e : expression?
+(define (synth Γ e)
+  (match e
+    ; Type annotations
+    [`(the ,t ,e2)
+     (if (not (type? t))
+         (stop e (format "Invalid type ~a" t))
+         (go-on ([_ (check Γ e2 t)])
+           (go t)))]
+    ; Recursion on Nat
+    [`(rec ,type ,target ,base ,step)
+     (go-on ([target-t (synth Γ target)]
+             [_ (if (type=? target-t 'Nat)
+                    (go 'ok)
+                    (stop target (format "Expected Nat, got ~v"
+                                         target-t)))]
+             [_ (check Γ base type)]
+             [_ (check Γ step `(→ Nat (→ ,type ,type)))])
+       (go type))]
+    [x #:when (and (symbol? x)
+                   (not (memv x '(the rec λ zero add1))))
+     (match (assv x Γ)
+       [#f (stop x "Variable not found")]
+       [(cons _ t) (go t)])]
+    [`(,rator ,rand)
+     (go-on ([rator-t (synth Γ rator)])
+       (match rator-t
+         [`(→ ,A ,B)
+          (go-on ([_ (check Γ rand A)])
+            (go B))]
+         [else (stop rator (format "Not a function type: ~v"
+                                   rator-t))]))]))
+; Γ : context?
+; e : expression?
+; t : type?
 
-
-
-
+(define (check Γ e t)
+  (match e
+    ['zero
+     (if (type=? t 'Nat)
+         (go 'ok)
+         (stop e (format "Tried to use ~v for zero" t)))]
+    [`(add1 ,n)
+     (if (type=? t 'Nat)
+         (go-on ([_ (check Γ n 'Nat)])
+           (go 'ok))
+         (stop e (format "Tried to use ~v for add1" t)))]
+    [`(λ (,x) ,b)
+     (match t
+       [`(→ ,A ,B)
+        (go-on ([_ (check (extend Γ x A) b B)])
+          (go 'ok))]
+       [non-arrow
+        (stop e (format "Instead of → type, got ~a" non-arrow))])]
+    [other
+     (go-on ([t2 (synth Γ e)])
+       (if (type=? t t2)
+           (go 'ok)
+           (stop e
+                 (format "Synthesized type ~v where type ~v was expected"
+                         t2
+                         t))))]))
 
