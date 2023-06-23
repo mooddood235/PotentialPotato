@@ -74,13 +74,6 @@
       (freshen used (add-* x))
       x))
 
-; name : symbol?
-(struct N-var (name))
-
-;rator : neutral?
-;rand : value?
-(struct N-ap (rator rand))
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; used-names : (listof symbol?)
 ; v : value?
@@ -505,6 +498,37 @@
   (match c
     [(CLOS _ x _) x]
     [(H-O-CLOS x _) x]))
+
+; name : symbol?
+(struct N-var (name) #:transparent)
+
+; fun : neutral?
+; arg : normal?
+(struct N-ap (fun arg) #:transparent)
+
+; pair : neutral?
+(struct N-car (pair) #:transparent)
+
+; pair : neutral?
+(struct N-cdr (pair) #:transparent)
+
+; target : neutral?
+; motive : normal?
+; base : normal?
+; step : normal?
+(struct N-ind-Nat (target motive base step) #:transparent)
+
+; target : neutral?
+; motive : normal?
+; base : normal?
+(struct N-replace (target motive base) #:transparent)
+
+; target : neutral?
+; motive : normal?
+(struct N-ind-Absurd (target motive) #:transparent)
+
+
+
 
 
 
