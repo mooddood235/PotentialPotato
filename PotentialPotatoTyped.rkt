@@ -247,10 +247,6 @@
 ; step : norm?
 (struct	N-rec (type target base step) #:transparent)
 
-; type : type?
-; value : value?
-(struct	THE (type value) #:transparent)
-
 ; v : any/c
 (define (norm? v) (THE? v))
 
@@ -331,10 +327,6 @@
         ,(read-back used-names base-type base)
         ,(read-back used-names step-type step))]))
 
-
-; type : type?
-; value : value?
-(struct	def (type value) #:transparent)
 
 ; Δ : definitions?
 (define (defs->ctx Δ)
@@ -527,8 +519,47 @@
 ; motive : normal?
 (struct N-ind-Absurd (target motive) #:transparent)
 
+; type : value?
+; val : value?
+(struct THE (type val) #:transparent)
 
+; type : value?
+; value : value?
+(struct def (type value) #:transparent)
 
+; type : value?
+(struct bind (type) #:transparent)
 
+; Γ : any/c
+(define (context? Γ)
+  (match Γ
+    ['() #t]
+    [(cons (cons x b) rest)
+     (and (symbol? x) (or (def? b) (bind? b)) (context? rest))]
+    [_ #f]))
 
+; x : symbol?
+; Γ : context?
 
+(define (lookup-type x Γ)
+  (match (assv x Γ)
+    [#f (stop x "Unknown variable")]
+    [(cons _ (bind type)) (go type)]
+    [(cons _ (def type _)) (go type)]))
+
+; Γ : context?
+(define (ctx->env Γ)
+  (map (lambda (binder)
+         (match binder
+           [(cons name (bind type))
+            (cons name
+                  (NEU type
+                       (N-var name)))]
+           [(cons name (def _ value))
+            (cons name value)]))
+       Γ))
+
+; Γ : context?
+; x : symbol?
+(define (extend-ctx Γ x t)
+  (cons (cons x (bind t)) Γ))
