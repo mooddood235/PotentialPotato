@@ -382,9 +382,26 @@
                      (read-back (map car Γ) type v))
              (run-program Δ rest)))))]))
 
+(define keywords
+  (list 'define
+        'U
+        'Nat 'zero 'add1 'ind-Nat
+        'Σ 'Sigma 'cons 'car 'cdr
+        'Π 'Pi 'λ 'lambda
+        '= 'same 'replace
+        'Trivial 'sole
+        'Absurd 'ind-Absurd
+        'Atom 'quote
+        'the))
 
+; x : keyword?
+(define (keyword? x)
+  (if (memv x keywords)
+      #t
+      #f))
 
-
-
-
+; x : any/c
+(define (var? x)
+  (and (symbol? x)
+       (not (keyword? x))))
 
