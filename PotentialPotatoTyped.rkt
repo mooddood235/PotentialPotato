@@ -247,9 +247,6 @@
 ; pred : value
 (struct ADD1 (pred) #:transparent)
 
-; type : type?
-; neu : neutral?
-(struct NEU (type neu) #:transparent)
 
 ; type : type?
 ; target : neutral?
@@ -459,18 +456,55 @@
           (α-equiv-aux rand1 rand2 xs1 xs2))]
     [(_ _) #f]))
 
+; domain : value?
+; range : closure?
+(struct PI (domain range) #:transparent)
+; body : closure?
+(struct LAM (body) #:transparent)
+; car-type : value?
+; cdr-type : closure?
+(struct SIGMA (car-type cdr-type) #:transparent)
+; car : value?
+; cdr : value?
+(struct PAIR (car cdr) #:transparent)
 
+(struct NAT () #:transparent)
 
+; type : value?
+; from : value?
+; to : value?
+(struct EQ (type from to) #:transparent)
 
+(struct SAME () #:transparent)
 
+(struct TRIVIAL () #:transparent)
 
+(struct ABSURD () #:transparent)
 
+(struct ATOM () #:transparent)
 
+; symbol : symbol?
+(struct QUOTE (symbol) #:transparent)
 
+(struct UNI () #:transparent)
 
+; type : value?
+; neutral : neutral?
+(struct NEU (type neutral) #:transparent)
 
+; x : symbol?
+; fun : (-> value ? value?)
+(struct H-O-CLOS (x fun) #:transparent)
 
+; c : any/c
+(define (closure? c)
+  (or (CLOS? c) (H-O-CLOS? c)))
 
+; c : closure?
+(define (closure-name c)
+  (match c
+    [(CLOS _ x _) x]
+    [(H-O-CLOS x _) x]))
 
 
 
