@@ -252,31 +252,31 @@
 
 ; p : environment
 ; e : expression
-(define (val ρ e)
-  (match e
-    [`(the ,type ,expr)
-     (val ρ expr)]
-    ['zero (ZERO)]
-    [`(add1 ,n) (ADD1 (val ρ n))]
-    [x #:when (and (symbol? x)
-                   (not (memv x '(the zero add1 λ rec))))
-     (cdr (assv x ρ))]
-    [`(λ (,x) ,b)
-     (CLOS ρ x b)]
-    [`(rec ,type ,target ,base ,step)
-     (do-rec type (val ρ target) (val ρ base) (val ρ step))]
-    [`(,rator ,rand)
-     (do-ap (val ρ rator) (val ρ rand))]))
+;(define (val ρ e)
+;  (match e
+;    [`(the ,type ,expr)
+;     (val ρ expr)]
+;    ['zero (ZERO)]
+;    [`(add1 ,n) (ADD1 (val ρ n))]
+;    [x #:when (and (symbol? x)
+;                   (not (memv x '(the zero add1 λ rec))))
+;     (cdr (assv x ρ))]
+;    [`(λ (,x) ,b)
+;     (CLOS ρ x b)]
+;    [`(rec ,type ,target ,base ,step)
+;     (do-rec type (val ρ target) (val ρ base) (val ρ step))]
+;    [`(,rator ,rand)
+;     (do-ap (val ρ rator) (val ρ rand))]))
 
 
 ; fun : value
 ; arg : value
-(define (do-ap fun arg)
-  (match fun
-    [(CLOS ρ x e)
-     (val (extend ρ x arg) e)]
-    [(NEU `(→ ,A ,B) ne)
-     (NEU B (N-ap ne (THE A arg)))]))
+;(define (do-ap fun arg)
+;  (match fun
+;    [(CLOS ρ x e)
+;     (val (extend ρ x arg) e)]
+;    [(NEU `(→ ,A ,B) ne)
+;     (NEU B (N-ap ne (THE A arg)))]))
 
 ; type : type?
 ; target : value?
@@ -315,17 +315,17 @@
 
 ; used-names : (listof symbol?)
 ; ne : neutral?
-(define (read-back-neutral used-names ne)
-  (match ne
-    [(N-var x) x]
-    [(N-ap fun (THE arg-type arg))
-     `(,(read-back-neutral used-names fun)
-       ,(read-back used-names arg-type arg))]
-    [(N-rec type target (THE base-type base) (THE step-type step))
-     `(rec ,type
-        ,(read-back-neutral used-names target)
-        ,(read-back used-names base-type base)
-        ,(read-back used-names step-type step))]))
+;(define (read-back-neutral used-names ne)
+;  (match ne
+;    [(N-var x) x]
+;    [(N-ap fun (THE arg-type arg))
+;     `(,(read-back-neutral used-names fun)
+;       ,(read-back used-names arg-type arg))]
+;    [(N-rec type target (THE base-type base) (THE step-type step))
+;     `(rec ,type
+;        ,(read-back-neutral used-names target)
+;        ,(read-back used-names base-type base)
+;        ,(read-back used-names step-type step))]))
 
 
 ; Δ : definitions?
@@ -464,6 +464,8 @@
 
 (struct TRIVIAL () #:transparent)
 
+(struct SOLE () #:transparent)
+
 (struct ABSURD () #:transparent)
 
 (struct ATOM () #:transparent)
@@ -563,3 +565,202 @@
 ; x : symbol?
 (define (extend-ctx Γ x t)
   (cons (cons x (bind t)) Γ))
+
+; c : closure?
+; v : value?
+(define (val-of-closure c v)
+  (match c
+    [(CLOS ρ x e) (val (extend ρ x v) e)]
+    [(H-O-CLOS x f) (f v)]))
+
+; p : environment?
+; e : expression?
+(define (val ρ e)
+  (match e
+    [`(the ,type ,expr)
+     (val ρ expr)]
+    ['U (UNI)]
+    [`(Π ((,x ,A)) ,B)
+     (PI (val ρ A) (CLOS ρ x B))]
+    [`(λ (,x) ,b)
+     (LAM (CLOS ρ x b))]
+    [`(Σ ((,x ,A)) ,D)
+     (SIGMA (val ρ A) (CLOS ρ x D))]
+    [`(cons ,a ,d)
+     (PAIR (val ρ a) (val ρ d))]
+    [`(car ,pr)
+     (do-car (val ρ pr))]
+    [`(cdr ,pr)
+     (do-cdr (val ρ pr))]
+    ['Nat (NAT)]
+    ['zero (ZERO)]
+    [`(add1 ,n) (ADD1 (val ρ n))]
+    [`(ind-Nat ,target ,motive ,base ,step)
+     (do-ind-Nat (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
+    [`(= ,A ,from ,to)
+     (EQ (val ρ A) (val ρ from) (val ρ to))]
+    ['same
+     (SAME)]
+    [`(replace ,target ,motive ,base)
+     (do-replace (val ρ target) (val ρ motive) (val ρ base))]
+    ['Trivial (TRIVIAL)]
+    ['sole (SOLE)]
+    ['Absurd (ABSURD)]
+    [`(ind-Absurd ,target ,motive) (do-ind-Absurd (val ρ target) (val ρ motive))]
+    ['Atom (ATOM)]
+    [`',a  (QUOTE a)]
+    [`(,rator ,rand)
+     (do-ap (val ρ rator) (val ρ rand))]
+    [x #:when (var? x)
+     (cdr (assv x ρ))]))
+
+; v : value?
+(define (do-car v)
+  (match v
+    [(PAIR a d) a]
+    [(NEU (SIGMA A _) ne)
+     (NEU A (N-car ne))]))
+
+; v : value?
+(define (do-cdr v)
+  (match v
+    [(PAIR a d) d]
+    [(NEU (SIGMA _ D) ne)
+     (NEU (val-of-closure D (do-car v))
+          (N-cdr ne))]))
+
+; fun : value?
+; arg : value?
+
+(define (do-ap fun arg)
+  (match fun
+    [(LAM c)
+     (val-of-closure c arg)]
+    [(NEU (PI A B) ne)
+     (NEU (val-of-closure B arg)
+          (N-ap ne (THE A arg)))]))
+
+; target : value?
+; motive : value?
+
+(define (do-ind-Absurd target motive)
+  (match target
+    [(NEU (ABSURD) ne)
+     (NEU motive (N-ind-Absurd ne (THE (UNI) motive)))]))
+
+; target : value?
+; motive : value?
+; base : value?
+
+(define (do-replace target motive base)
+  (match target
+    [(SAME) base]
+    [(NEU (EQ A from to) ne)
+     (NEU (do-ap motive to)
+          (N-replace ne
+                     (THE (PI A (H-O-CLOS 'x (lambda (_) (UNI))))
+                          motive)
+                     (THE (do-ap motive from)
+                          base)))]))
+; target : value?
+; motive : value?
+; base : value?
+; step : value?
+
+(define (do-ind-Nat target motive base step)
+  (match target
+    [(ZERO) base]
+    [(ADD1 n) (do-ap (do-ap step n) (do-ind-Nat n motive base step))]
+    [(NEU (NAT) ne)
+     (NEU (do-ap motive target)
+          (N-ind-Nat
+           ne
+           (THE (PI (NAT)
+                    (H-O-CLOS 'k (lambda (k) (UNI))))
+                motive)
+           (THE (do-ap motive (ZERO)) base)
+           (THE (ind-Nat-step-type motive)
+                step)))]))
+
+; motive : value?
+(define (ind-Nat-step-type motive)
+  (PI (NAT)
+      (H-O-CLOS 'n-1
+                (lambda (n-1)
+                  (PI (do-ap motive n-1)
+                      (H-O-CLOS 'ih
+                                (lambda (ih)
+                                  (do-ap motive (ADD1 n-1)))))))))
+; Γ : context?
+; norm : norm?
+
+(define (read-back-norm Γ norm)
+  (match norm
+    [(THE (NAT) (ZERO)) 'zero]
+    [(THE (NAT) (ADD1 n))
+     `(add1 ,(read-back-norm Γ (THE (NAT) n)))]
+    [(THE (PI A B) f)
+     (define x (closure-name B))
+     (define y (freshen (map car Γ) x))
+     (define y-val (NEU A (N-var y)))
+     `(λ (,y)
+        ,(read-back-norm (extend-ctx Γ y A)
+                         (THE (val-of-closure B y-val)
+                              (do-ap f y-val))))]
+    [(THE (SIGMA A D) p)
+     (define the-car (THE A (do-car p)))
+     (define the-cdr (THE (val-of-closure D the-car) (do-cdr p)))
+     `(cons ,(read-back-norm Γ the-car) ,(read-back-norm Γ the-cdr))]
+    [(THE (TRIVIAL) _) 'sole]
+    [(THE (ABSURD) (NEU (ABSURD) ne))
+     `(the Absurd
+           ,(read-back-neutral Γ ne))]
+    [(THE (EQ A from to) (SAME)) 'same]
+    [(THE (ATOM) (QUOTE x)) `',x]
+    [(THE (UNI) (NAT)) 'Nat]
+    [(THE (UNI) (ATOM)) 'Atom]
+    [(THE (UNI) (TRIVIAL)) 'Trivial]
+    [(THE (UNI) (ABSURD)) 'Absurd]
+    [(THE (UNI) (EQ A from to))
+     `(= ,(read-back-norm Γ (THE (UNI) A))
+         ,(read-back-norm Γ (THE A from))
+         ,(read-back-norm Γ (THE A to)))]
+    [(THE (UNI) (SIGMA A D))
+     (define x (closure-name D))
+     (define y (freshen (map car Γ) x))
+     `(Σ ((,y ,(read-back-norm Γ (THE (UNI) A))))
+         ,(read-back-norm (extend-ctx Γ y A)
+                          (THE (UNI) (val-of-closure D (NEU A (N-var y))))))]
+    [(THE (UNI) (PI A B))
+     (define x (closure-name B))
+     (define y (freshen (map car Γ) x))
+     `(Π ((,y ,(read-back-norm Γ (THE (UNI) A))))
+         ,(read-back-norm (extend-ctx Γ y A)
+                          (THE (UNI) (val-of-closure B (NEU A (N-var y))))))]
+    [(THE (UNI) (UNI)) 'U]
+    [(THE t1 (NEU t2 ne))
+     (read-back-neutral Γ ne)]))
+
+; Γ : context?
+; neu : neutral?
+
+(define (read-back-neutral Γ neu)
+  (match neu
+    [(N-var x) x]
+    [(N-ap ne rand)
+     `(,(read-back-neutral Γ ne)
+       ,(read-back-norm Γ rand))]
+    [(N-car ne) `(car ,(read-back-neutral Γ ne))]
+    [(N-cdr ne) `(cdr ,(read-back-neutral Γ ne))]
+    [(N-ind-Nat ne motive base step)
+     `(ind-Nat ,(read-back-neutral Γ ne)
+               ,(read-back-norm Γ motive)
+               ,(read-back-norm Γ base)
+               ,(read-back-norm Γ step))]
+    [(N-replace ne motive base)
+     `(replace ,(read-back-neutral Γ ne)
+               ,(read-back-norm Γ motive)
+               ,(read-back-norm Γ base))]
+    [(N-ind-Absurd ne motive)
+     `(ind-Absurd (the Absurd ,(read-back-neutral Γ ne))
+                  ,(read-back-norm Γ motive))]))
