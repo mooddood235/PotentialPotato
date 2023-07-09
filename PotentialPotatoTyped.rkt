@@ -481,11 +481,7 @@
                           base)))]))
 
 (define (do-+ x y)
-  (match x
-    [(ZERO) y]
-    [(ADD1 n0) (match y
-                [(ZERO) x]
-                [(ADD1 n1) (create-add1s (+ (count-add1s x) (count-add1s y)))])]))
+  (create-add1s (+ (count-add1s x) (count-add1s y))))
 
 ; x : value?
 (define (count-add1s x)
