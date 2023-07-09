@@ -16,50 +16,6 @@
 (define (extend p x v)
   (cons (cons x v) p))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; ρ : environment?
-; e : expression?
-;(define (val ρ e)
- ; (match e
-  ;  [`(λ (,x) ,b)
-   ;  (CLOS ρ x b)]
-    ;[x #:when (symbol? x)
-     ;(let ((xv (assv x ρ)))
-      ; (if xv
-       ;    (cdr xv)
-        ;   (error 'val "Unknown variable ~a" x)))]
-;    [`(,rator ,rand)
- ;    (do-ap (val ρ rator) (val ρ rand))]))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-; fun : value?
-; arg : value?
-;(define (do-ap fun arg)
- ; (match fun
-  ;  [(CLOS ρ x b)
-  ;   (val (extend ρ x arg) b)]
-    ; If the argument is neutral, construct a bigger neutral expression.
-   ; [neutral-fun
-    ; (N-ap fun arg)]))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; ρ : (listof (pair symbol? value?))
-; exprs : (listof expression?)
-;(define (run-program ρ exprs)
- ; (match exprs
-;    [(list) (void)]
-;    [(list `(define ,x ,e) rest ...)
-;     (let ([v (val ρ e)])
-;       (run-program (extend ρ x v) rest))]
-;    [(list e rest ...)
-;     (displayln (norm ρ e))
-;     (run-program ρ rest)]))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ; x : symbol?
 (define (add-* x)
   (string->symbol
@@ -73,22 +29,6 @@
   (if (memv x used)
       (freshen used (add-* x))
       x))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; used-names : (listof symbol?)
-; v : value?
-;(define (read-back used-names v)
-;  (match v
-;    [(CLOS ρ x body)
-;     (let* ((y (freshen used-names x))
-;            (neutral-y (N-var y)))
-;       `(λ (,y)
-;          ,(read-back (cons y used-names)
-;                      (val (extend ρ x neutral-y) body))))]
-;    [(N-var x) x]
-;    [(N-ap rator rand)
-;     `(,(read-back used-names rator) ,(read-back used-names rand))]))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (norm ρ e)
   (read-back '() (val ρ e)))
@@ -155,71 +95,6 @@
   (type=? t t))
 
 ; Γ : context?
-; e : expression?
-;(define (synth Γ e)
-;  (match e
-;    ; Type annotations
-;    [`(the ,t ,e2)
-;     (if (not (type? t))
-;         (stop e (format "Invalid type ~a" t))
-;         (go-on ([_ (check Γ e2 t)])
-;           (go t)))]
-;    ; Recursion on Nat
-;    [`(rec ,type ,target ,base ,step)
-;     (go-on ([target-t (synth Γ target)]
-;             [_ (if (type=? target-t 'Nat)
-;                    (go 'ok)
-;                    (stop target (format "Expected Nat, got ~v"
-;                                         target-t)))]
-;             [_ (check Γ base type)]
-;             [_ (check Γ step `(→ Nat (→ ,type ,type)))])
-;       (go type))]
-;    [x #:when (and (symbol? x)
-;                   (not (memv x '(the rec λ zero add1))))
-;     (match (assv x Γ)
-;       [#f (stop x "Variable not found")]
-;       [(cons _ t) (go t)])]
-;    [`(,rator ,rand)
-;     (go-on ([rator-t (synth Γ rator)])
-;       (match rator-t
-;         [`(→ ,A ,B)
-;          (go-on ([_ (check Γ rand A)])
-;            (go B))]
-;         [else (stop rator (format "Not a function type: ~v"
-;                                   rator-t))]))]))
-
-; Γ : context?
-; e : expression?
-; t : type?
-
-;(define (check Γ e t)
-;  (match e
-;    ['zero
-;     (if (type=? t 'Nat)
-;         (go 'ok)
-;         (stop e (format "Tried to use ~v for zero" t)))]
-;    [`(add1 ,n)
-;     (if (type=? t 'Nat)
-;         (go-on ([_ (check Γ n 'Nat)])
-;           (go 'ok))
-;         (stop e (format "Tried to use ~v for add1" t)))]
-;    [`(λ (,x) ,b)
-;     (match t
-;       [`(→ ,A ,B)
-;        (go-on ([_ (check (extend Γ x A) b B)])
-;          (go 'ok))]
-;       [non-arrow
-;        (stop e (format "Instead of → type, got ~a" non-arrow))])]
-;    [other
-;     (go-on ([t2 (synth Γ e)])
-;       (if (type=? t t2)
-;           (go 'ok)
-;           (stop e
-;                 (format "Synthesized type ~v where type ~v was expected"
-;                         t2
-;                         t))))]))
-
-; Γ : context?
 ; prog : (listof (or/c expression? (list/c 'define symbol? expression?)))
 (define (check-program Γ prog)
   (match prog
@@ -250,34 +125,6 @@
 
 ; v : any/c
 (define (norm? v) (THE? v))
-
-; p : environment
-; e : expression
-;(define (val ρ e)
-;  (match e
-;    [`(the ,type ,expr)
-;     (val ρ expr)]
-;    ['zero (ZERO)]
-;    [`(add1 ,n) (ADD1 (val ρ n))]
-;    [x #:when (and (symbol? x)
-;                   (not (memv x '(the zero add1 λ rec))))
-;     (cdr (assv x ρ))]
-;    [`(λ (,x) ,b)
-;     (CLOS ρ x b)]
-;    [`(rec ,type ,target ,base ,step)
-;     (do-rec type (val ρ target) (val ρ base) (val ρ step))]
-;    [`(,rator ,rand)
-;     (do-ap (val ρ rator) (val ρ rand))]))
-
-
-; fun : value
-; arg : value
-;(define (do-ap fun arg)
-;  (match fun
-;    [(CLOS ρ x e)
-;     (val (extend ρ x arg) e)]
-;    [(NEU `(→ ,A ,B) ne)
-;     (NEU B (N-ap ne (THE A arg)))]))
 
 ; type : type?
 ; target : value?
@@ -314,21 +161,6 @@
                       B
                       (do-ap value (NEU A (N-var x))))))]))
 
-; used-names : (listof symbol?)
-; ne : neutral?
-;(define (read-back-neutral used-names ne)
-;  (match ne
-;    [(N-var x) x]
-;    [(N-ap fun (THE arg-type arg))
-;     `(,(read-back-neutral used-names fun)
-;       ,(read-back used-names arg-type arg))]
-;    [(N-rec type target (THE base-type base) (THE step-type step))
-;     `(rec ,type
-;        ,(read-back-neutral used-names target)
-;        ,(read-back used-names base-type base)
-;        ,(read-back used-names step-type step))]))
-
-
 ; Δ : definitions?
 (define (defs->ctx Δ)
   (match Δ
@@ -342,28 +174,6 @@
     ['() '()]
     [(cons (cons x (def _ value)) rest)
      (extend (defs->env rest) x value)]))
-
-; Δ : definitions?
-; prog : (listof (or/c (list 'define symbol? expression?)
-;              expression?))
-
-;(define (run-program Δ prog)
-;  (match prog
-;    ['() (go Δ)]
-;    [(cons `(define ,x ,e) rest)
-;     (go-on ([type (synth (defs->ctx Δ) e)])
-;       (run-program (extend Δ x (def type (val (defs->env Δ) e)))
-;                    rest))]
-;    [(cons e rest)
-;     (let ([Γ (defs->ctx Δ)]
-;           [ρ (defs->env Δ)])
-;       (go-on ([type (synth Γ e)])
-;         (let ([v (val ρ e)])
-;           (begin
-;             (printf "(the ~a\n  ~a)\n"
-;                     type
-;                     (read-back (map car Γ) type v))
-;             (run-program Δ rest)))))]))
 
 (define keywords
   (list 'define
@@ -964,3 +774,23 @@
     [(cons d rest)
      (go-on ([new-Γ (interact Γ d)])
        (run-program new-Γ rest))]))
+
+; -----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
