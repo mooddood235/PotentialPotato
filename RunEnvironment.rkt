@@ -1,8 +1,9 @@
 #lang pie
 
-(claim x
+(claim identity
   (-> Nat Nat))
 
-(define x (the (-> Nat Nat) (lambda (x) x)))
+(define identity
+  (lambda (x) x))
 
-x
+(add1 identity)

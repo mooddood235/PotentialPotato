@@ -116,10 +116,6 @@
 ; pred : value
 (struct ADD1 (pred) #:transparent)
 
-; x : value
-; y : value
-(struct PLUS (x y) #:transparent)
-
 
 ; type : type?
 ; target : neutral?
@@ -156,7 +152,6 @@
      (match value
        [(ZERO) 'zero]
        [(ADD1 n) `(add1 ,(read-back used-names 'Nat n))]
-       [(PLUS x y) `(+ ,(read-back used-names 'Nat x) ,(read-back used-names 'Nat y))]
        [(NEU _ ne)
         (read-back-neutral used-names ne)])]
     [`(→ ,A ,B)
@@ -530,8 +525,7 @@
     [(THE (NAT) (ZERO)) 'zero]
     [(THE (NAT) (ADD1 n))
      `(add1 ,(read-back-norm Γ (THE (NAT) n)))]
-    [(THE (NAT) (PLUS x y))
-     `(+ ,(read-back-norm Γ (THE (NAT) x)) ,(read-back-norm Γ (THE (NAT) y)))]
+   
     [(THE (PI A B) f)
      (define x (closure-name B))
      (define y (freshen (map car Γ) x))
