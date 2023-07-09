@@ -116,6 +116,10 @@
 ; pred : value
 (struct ADD1 (pred) #:transparent)
 
+; x : value
+; y : value
+(struct PLUS (x y) #:transparent)
+
 
 ; type : type?
 ; target : neutral?
@@ -152,6 +156,7 @@
      (match value
        [(ZERO) 'zero]
        [(ADD1 n) `(add1 ,(read-back used-names 'Nat n))]
+       [(PLUS x y) `(+ ,(read-back used-names 'Nat x) ,(read-back used-names 'Nat y))]
        [(NEU _ ne)
         (read-back-neutral used-names ne)])]
     [`(→ ,A ,B)
@@ -178,7 +183,7 @@
 (define keywords
   (list 'define
         'U
-        'Nat 'zero 'add1 'ind-Nat
+        'Nat 'zero 'add1 '+ 'ind-Nat
         'Σ 'Sigma 'cons 'car 'cdr
         'Π 'Pi 'λ 'lambda
         '= 'same 'replace
@@ -406,6 +411,7 @@
     ['Nat (NAT)]
     ['zero (ZERO)]
     [`(add1 ,n) (ADD1 (val ρ n))]
+    [`(+ ,x ,y) (PLUS (val ρ x) (val ρ y))]
     [`(ind-Nat ,target ,motive ,base ,step)
      (do-ind-Nat (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
     [`(= ,A ,from ,to)
@@ -510,6 +516,8 @@
     [(THE (NAT) (ZERO)) 'zero]
     [(THE (NAT) (ADD1 n))
      `(add1 ,(read-back-norm Γ (THE (NAT) n)))]
+    [(THE (NAT) (PLUS x y))
+     `(+ ,(read-back-norm Γ (THE (NAT) x)) ,(read-back-norm Γ (THE (NAT) y)))]
     [(THE (PI A B) f)
      (define x (closure-name B))
      (define y (freshen (map car Γ) x))
@@ -700,6 +708,14 @@
           (go `(add1 ,n-out)))]
        [non-NAT (stop e (format "Expected Nat, got ~v"
                                 (read-back-norm Γ (THE (UNI) non-NAT))))])]
+    [`(+ ,x ,y)
+     (match t
+       [(NAT)
+        (go-on ([x-out (check Γ x (NAT))] [y-out (check Γ y (NAT))])
+               (go `(+ ,x-out ,y-out)))]
+       [non-NAT (stop e (format "Expected Nat, got ~v"
+                                (read-back-norm Γ (THE (UNI) non-NAT))))])]
+    
     ['same
      (match t
        [(EQ A from to)
