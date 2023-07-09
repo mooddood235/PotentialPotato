@@ -411,7 +411,7 @@
     ['Nat (NAT)]
     ['zero (ZERO)]
     [`(add1 ,n) (ADD1 (val ρ n))]
-    [`(+ ,x ,y) (PLUS (val ρ x) (val ρ y))]
+    [`(+ ,x ,y) (do-+ (val ρ x) (val ρ y))]
     [`(ind-Nat ,target ,motive ,base ,step)
      (do-ind-Nat (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
     [`(= ,A ,from ,to)
@@ -479,6 +479,24 @@
                           motive)
                      (THE (do-ap motive from)
                           base)))]))
+
+(define (do-+ x y)
+  (match x
+    [(ZERO) y]
+    [(ADD1 n0) (match y
+                [(ZERO) x]
+                [(ADD1 n1) (create-add1s (+ (count-add1s x) (count-add1s y)))])]))
+
+; x : value?
+(define (count-add1s x)
+  (match x
+    [(ZERO) 0]
+    [(ADD1 n) (+ 1 (count-add1s n))]))
+
+(define (create-add1s n)
+  (if (= n 0) (ZERO) (ADD1 (create-add1s (- n 1)))))
+
+
 ; target : value?
 ; motive : value?
 ; base : value?
