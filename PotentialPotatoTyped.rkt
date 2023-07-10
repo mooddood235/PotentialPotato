@@ -323,6 +323,10 @@
 ; step : normal?
 (struct N-ind-Nat (target motive base step) #:transparent)
 
+; x : (or expr? neutral?)
+; y : (or expr? neutral?)
+(struct N-+ (x y) #:transparent)
+
 ; target : neutral?
 ; motive : normal?
 ; base : normal?
@@ -475,8 +479,15 @@
                      (THE (do-ap motive from)
                           base)))]))
 
+;(define (do-+ x y)
+;  (create-add1s (+ (count-add1s x) (count-add1s y))))
+
 (define (do-+ x y)
-  (create-add1s (+ (count-add1s x) (count-add1s y))))
+  (if (or (NEU? x) (NEU? y))
+      (let ([x-out (match x [(NEU (NAT) ne) ne] [not-NEU (THE (NAT) x)])]
+            [y-out (match y [(NEU (NAT) ne) ne] [not-NEU (THE (NAT) y)])])
+            (NEU (NAT) (N-+ x-out y-out)))
+      (create-add1s (+ (count-add1s x) (count-add1s y)))))
 
 ; x : value?
 (define (count-add1s x)
@@ -584,6 +595,9 @@
                ,(read-back-norm Γ motive)
                ,(read-back-norm Γ base)
                ,(read-back-norm Γ step))]
+    [(N-+ x y)
+     `(+ ,(if (N-var? x) (read-back-neutral Γ x) (read-back-norm Γ x))
+         ,(if (N-var? y) (read-back-neutral Γ y) (read-back-norm Γ y)))]
     [(N-replace ne motive base)
      `(replace ,(read-back-neutral Γ ne)
                ,(read-back-norm Γ motive)
