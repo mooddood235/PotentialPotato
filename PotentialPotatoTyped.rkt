@@ -375,11 +375,7 @@
         'Trivial 'sole
         'Absurd 'ind-Absurd
         'Atom 'quote
-        'the
-        ;added List nil and double colon
-        'List
-        '::
-        'nil))
+        'the))
 
 ; x : keyword?
 (define (keyword? x)
@@ -479,11 +475,6 @@
 (struct QUOTE (symbol) #:transparent)
 
 (struct UNI () #:transparent)
-
-;LIST: adding structs nil, concat:: and List
-(struct LIST (entry-type) #:transparent)
-(struct NIL () #:transparent)
-(struct CONCAT:: (head tail) #:transparent)
 
 ; type : value?
 ; neutral : neutral?
@@ -598,12 +589,6 @@
      (SIGMA (val ρ A) (CLOS ρ x D))]
     [`(cons ,a ,d)
      (PAIR (val ρ a) (val ρ d))]
-    ;added List expression
-    [`(List ,E) (LIST (val ρ E))]
-    ;added :: expression, not super sure if the pattern is correct
-    [`(:: ,head ,tail) (CONCAT:: (val ρ head) (val ρ tail))]
-    ;added NIL expression
-    ['nil (NIL)]
     [`(car ,pr)
      (do-car (val ρ pr))]
     [`(cdr ,pr)
@@ -715,10 +700,6 @@
     [(THE (NAT) (ZERO)) 'zero]
     [(THE (NAT) (ADD1 n))
      `(add1 ,(read-back-norm Γ (THE (NAT) n)))]
-    ;adding readback for nil
-    [(THE (LIST E) (NIL)) 'nil]
-    ;adding readback for ::
-    [(THE (LIST E) (CONCAT:: hed tal)) `(:: ,(read-back-norm Γ (THE E hed)) ,(read-back-norm Γ (THE (LIST E) tal)))]
     [(THE (PI A B) f)
      (define x (closure-name B))
      (define y (freshen (map car Γ) x))
@@ -738,8 +719,6 @@
     [(THE (EQ A from to) (SAME)) 'same]
     [(THE (ATOM) (QUOTE x)) `',x]
     [(THE (UNI) (NAT)) 'Nat]
-    ;adding readback for the actual type name List E
-    [(THE (UNI) (LIST E)) `(List ,(read-back-norm Γ (THE (UNI) E)))]
     [(THE (UNI) (ATOM)) 'Atom]
     [(THE (UNI) (TRIVIAL)) 'Trivial]
     [(THE (UNI) (ABSURD)) 'Absurd]
@@ -821,9 +800,6 @@
           (stop e (format "Expected Σ, got ~v"
                           (read-back-norm Γ (THE (UNI) non-SIGMA))))]))]
     ['Nat (go '(the U Nat))]
-    ;Adding synthesizing for List
-    [`(List ,E)
-     (go-on ([Ek (check Γ E (UNI))]) (go `(the U (List ,Ek))))]
     [`(ind-Nat ,target ,motive ,base ,step)
      (go-on ([target-out (check Γ target (NAT))]
              [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'n (lambda (_) (UNI)))))]
@@ -914,21 +890,6 @@
           (go `(add1 ,n-out)))]
        [non-NAT (stop e (format "Expected Nat, got ~v"
                                 (read-back-norm Γ (THE (UNI) non-NAT))))])]
-    ;adding checking for nil and ::, but the output message is weird, need to fix the (List E) part
-    ['nil
-     (match t
-       [(LIST E) (go 'nil)]
-       [non-LIST (stop e (format "Expected (List E), got ~v"
-                                (read-back-norm Γ (THE (UNI) non-LIST))))])]
-    [`(:: ,hed ,tal)
-     (match t
-       [(LIST E)
-        (go-on ([h-out (check Γ hed E)]
-                [t-out (check Γ tal (LIST E))])
-          (go `(:: ,h-out ,t-out)))]
-       [non-LIST (stop e (format "Expected (List E), got ~v"
-                                  (read-back-norm Γ (THE (UNI) non-LIST))))])]
-        
     ['same
      (match t
        [(EQ A from to)
