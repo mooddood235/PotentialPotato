@@ -803,14 +803,14 @@
 (define (desugar e)
   (match e
     [`(the ,x ,A) `(the ,(desugar x) ,(desugar A))]
-    [`(λ (,x ,y ...) ,b) (desugar-λ e)]
+    [`(,(or 'λ 'lambda) (,x ,y ...) ,b) (desugar-λ e)]
     [_ e]))
   
 
 ; e : expr?
 (define (desugar-λ e)
   (match e
-    [`(λ (,x ,y ,z ...) ,b)
+    [`(,(or 'λ 'lambda) (,x ,y ,z ...) ,b)
      `(λ (,x) ,(desugar-λ `(λ ,(cons y z) ,b)))]
     [not-sugared e]))
 
