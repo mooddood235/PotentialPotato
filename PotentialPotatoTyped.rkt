@@ -806,6 +806,8 @@
     [`(,(or 'λ 'lambda) (,x ,y ...) ,b) (desugar-λ e)]
     [`(,(or 'Π 'Pi) (,d0 ,d1 ...) ,range) (desugar-Π e)]
     [`(,rator ,rand) `(,(desugar rator) ,(desugar rand))]
+    [`(,rator ,rand0 ,rand1 ...) (desugar `,(cons `(,rator ,rand0) rand1))]
+                                     
     [_ e]))
   
 
