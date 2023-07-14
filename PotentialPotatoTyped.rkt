@@ -802,9 +802,10 @@
 ; s : expr?
 (define (desugar e)
   (match e
-    [`(the ,x ,A) `(the ,(desugar x) ,(desugar A))]
+    [`(the ,A ,x) `(the ,(desugar A) ,(desugar x))]
     [`(,(or 'λ 'lambda) (,x ,y ...) ,b) (desugar-λ e)]
     [`(,(or 'Π 'Pi) (,d0 ,d1 ...) ,range) (desugar-Π e)]
+    [`(,rator ,rand) `(,(desugar rator) ,(desugar rand))]
     [_ e]))
   
 
