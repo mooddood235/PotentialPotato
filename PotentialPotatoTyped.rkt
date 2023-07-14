@@ -804,6 +804,7 @@
   (match e
     [`(the ,x ,A) `(the ,(desugar x) ,(desugar A))]
     [`(,(or 'λ 'lambda) (,x ,y ...) ,b) (desugar-λ e)]
+    [`(,(or 'Π 'Pi) (,d0 ,d1 ...) ,range) (desugar-Π e)]
     [_ e]))
   
 
@@ -812,6 +813,12 @@
   (match e
     [`(,(or 'λ 'lambda) (,x ,y ,z ...) ,b)
      `(λ (,x) ,(desugar-λ `(λ ,(cons y z) ,b)))]
+    [not-sugared e]))
+
+(define (desugar-Π e)
+  (match e
+    [`(,(or 'Π 'Pi) (,d0 ,d1 ,d2 ...) ,range)
+     `(Π (,d0) ,(desugar-Π `(Π ,(cons d1 d2) ,range)))]
     [not-sugared e]))
 
 ; -----------------------------------------------------------
