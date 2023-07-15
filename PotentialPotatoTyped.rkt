@@ -479,24 +479,21 @@
                      (THE (do-ap motive from)
                           base)))]))
 
-;(define (do-+ x y)
-;  (create-add1s (+ (count-add1s x) (count-add1s y))))
-
 (define (do-+ x y)
-  (if (or (NEU? x) (NEU? y))
-      (let ([x-out (match x [(NEU (NAT) ne) ne] [not-NEU (THE (NAT) x)])]
-            [y-out (match y [(NEU (NAT) ne) ne] [not-NEU (THE (NAT) y)])])
-            (NEU (NAT) (N-+ x-out y-out)))
-      (create-add1s (+ (count-add1s x) (count-add1s y)))))
-
+  (cond
+    [(and (NEU? x) (NEU? y)) (NEU (NAT) (N-+ (match x [(NEU (NAT) ne) ne]) (match y [(NEU (NAT) ne) ne])))]
+    [(NEU? x) (create-add1s (count-add1s y) x)]
+    [(NEU? y) (create-add1s (count-add1s x) y)]
+    [else (create-add1s (+ (count-add1s x) (count-add1s y)) (ZERO))]))
+    
 ; x : value?
 (define (count-add1s x)
   (match x
     [(ZERO) 0]
     [(ADD1 n) (+ 1 (count-add1s n))]))
 
-(define (create-add1s n)
-  (if (= n 0) (ZERO) (ADD1 (create-add1s (- n 1)))))
+(define (create-add1s n e)
+  (if (= n 0) e (ADD1 (create-add1s (- n 1) e))))
 
 
 ; target : value?
@@ -596,8 +593,7 @@
                ,(read-back-norm Γ base)
                ,(read-back-norm Γ step))]
     [(N-+ x y)
-     `(+ ,(if (N-var? x) (read-back-neutral Γ x) (read-back-norm Γ x))
-         ,(if (N-var? y) (read-back-neutral Γ y) (read-back-norm Γ y)))]
+     `(+ ,(read-back-neutral Γ x) ,(read-back-neutral Γ y))]
     [(N-replace ne motive base)
      `(replace ,(read-back-neutral Γ ne)
                ,(read-back-norm Γ motive)
