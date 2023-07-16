@@ -381,7 +381,11 @@
         'List
         '::
         'nil
-        'ind-List))
+        'ind-List
+        ;adding vector vecnil and vec::
+        'Vec
+        'vecnil
+        'vec::))
 
 ; x : keyword?
 (define (keyword? x)
@@ -486,6 +490,11 @@
 (struct LIST (entry-type) #:transparent)
 (struct NIL () #:transparent)
 (struct CONCAT:: (head tail) #:transparent)
+
+;VECTOR: adding struct vecnil vcat:: and VEC
+(struct VEC (entry-type len) #:transparent)
+(struct VECNIL () #:transparent)
+(struct VCAT:: (head tail) #:transparent)
 
 ; type : value?
 ; neutral : neutral?
@@ -609,6 +618,10 @@
     [`(:: ,head ,tail) (CONCAT:: (val ρ head) (val ρ tail))]
     ;added NIL expression
     ['nil (NIL)]
+    ;added Vec expression
+    [`(Vec ,E ,n) (VEC (val ρ E) (val ρ n))]
+    [`(vec:: ,head ,tail) (VCAT:: (val ρ head) (val ρ tail))]
+    ['vecnil (VECNIL)]
     [`(car ,pr)
      (do-car (val ρ pr))]
     [`(cdr ,pr)
@@ -755,6 +768,10 @@
     [(THE (LIST E) (NIL)) 'nil]
     ;adding readback for ::
     [(THE (LIST E) (CONCAT:: hed tal)) `(:: ,(read-back-norm Γ (THE E hed)) ,(read-back-norm Γ (THE (LIST E) tal)))]
+    ;adding readback for vecnil
+    [(THE (VEC E n) (VECNIL)) 'vecnil]
+    ;adding readback for vec::
+    [(THE (VEC E (ADD1 n)) (VCAT:: hed tal)) `(vec:: ,(read-back-norm Γ (THE E hed)) ,(read-back-norm Γ (THE (VEC E n) tal)))]
     [(THE (PI A B) f)
      (define x (closure-name B))
      (define y (freshen (map car Γ) x))
@@ -776,6 +793,8 @@
     [(THE (UNI) (NAT)) 'Nat]
     ;adding readback for the actual type name List E
     [(THE (UNI) (LIST E)) `(List ,(read-back-norm Γ (THE (UNI) E)))]
+    ;adding readbackk for the actual type name Vec E n
+    [(THE (UNI) (VEC E n)) `(Vec ,(read-back-norm Γ (THE (UNI) E)) ,(read-back-norm Γ (THE (NAT) n)))]
     [(THE (UNI) (ATOM)) 'Atom]
     [(THE (UNI) (TRIVIAL)) 'Trivial]
     [(THE (UNI) (ABSURD)) 'Absurd]
@@ -866,6 +885,9 @@
     ;Adding synthesizing for List
     [`(List ,E)
      (go-on ([Ek (check Γ E (UNI))]) (go `(the U (List ,Ek))))]
+    ;adding synthesizing for Vec
+    [`(Vec ,E ,n)
+     (go-on ([Ek (check Γ E (UNI))] [nk (check Γ n (NAT))]) (go `(the U (Vec ,Ek ,nk))))]
     [`(ind-Nat ,target ,motive ,base ,step)
      (go-on ([target-out (check Γ target (NAT))]
              [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'n (lambda (_) (UNI)))))]
@@ -988,7 +1010,20 @@
           (go `(:: ,h-out ,t-out)))]
        [non-LIST (stop e (format "Expected (List E), got ~v"
                                   (read-back-norm Γ (THE (UNI) non-LIST))))])]
-        
+    ;adding checking for vecnil and vec::, but the output message is weird, need to fix the (Vec E) part
+    ['vecnil
+     (match t
+       [(VEC E (ZERO)) (go 'vecnil)]
+       [non-VEC (stop e (format "Expected (Vec E zero), got ~v"
+                                (read-back-norm Γ (THE (UNI) non-VEC))))])]
+    [`(vec:: ,hed ,tal)
+     (match t
+       [(VEC E (ADD1 n))
+        (go-on ([h-out (check Γ hed E)]
+                [t-out (check Γ tal (VEC E n))])
+          (go `(vec:: ,h-out ,t-out)))]
+       [non-LIST (stop e (format "Expected (Vec E (add1 n)), got ~v"
+                                   (read-back-norm Γ (THE (UNI) non-LIST))))])]
     ['same
      (match t
        [(EQ A from to)
@@ -1064,7 +1099,7 @@
     [(cons d rest)
      (go-on ([new-Γ (interact Γ d)])
        (run-program new-Γ rest))]))
-(trace run-program)
+;(trace run-program)
 ;testing git
 
 ;(run-program `() `((the (List Nat) (ind-List (the (List Nat) (:: zero nil))
