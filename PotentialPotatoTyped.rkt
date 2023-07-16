@@ -185,13 +185,22 @@
         'Trivial 'sole
         'Absurd 'ind-Absurd
         'Atom 'quote
-        'the))
+        'the 'match))
+
+(define a-matchables
+  (list 'zero))
 
 ; x : keyword?
 (define (keyword? x)
   (if (memv x keywords)
       #t
       #f))
+
+(define (a-matchable? x)
+  (if (or (memv x a-matchables) (list? x))
+      #t
+      #f))
+  
 
 ; x : any/c
 (define (var? x)
@@ -388,12 +397,43 @@
     [(CLOS ρ x e) (val (extend ρ x v) e)]
     [(H-O-CLOS x f) (f v)]))
 
+(define (do-match expr case0 case*)
+  (match case0
+    [`(,m ,r)
+     (if (do-match-aux expr m) r (match case*
+                                   [`() #f]
+                                   [`(,case1 ,case** ...) (do-match case1 case**)]))]))
+(define (do-match-aux e m)
+  (cond
+    [(and (list? e) (list? m)) (match-lists e m)]
+    [(and (or (arbitrary? e) (a-matchable? e)) (arbitrary? m) #t)]
+    [else (equal? e m)]))
+    
+(define (arbitrary? e)
+  (not (or (keyword? e) (list? e))))
+
+(define (match-lists L0 L1)
+  (if (not (= (list-length L0) (list-length L1)))
+      #f
+      (match L0
+        [`(,x ,x* ...)
+         (match L1
+           [`(,y ,y* ...)
+            (and (do-match-aux x y) (match-lists x* y*))])]
+        [`() #t])))
+
+(define (list-length L)
+  (match L
+    [`(,e ,es ...) (+ 1 (list-length es))]
+    [`() 0]))
+
 ; p : environment?
 ; e : expression?
 (define (val ρ e)
   (match e
-    [`(the ,type ,expr)
-     (val ρ expr)]
+    [`(the ,type ,expr) (val ρ expr)]
+    [`(match ,expr ,case0 ,case* ...)
+     (do-match expr case0 case*)]
     ['U (UNI)]
     [`(Π ((,x ,A)) ,B)
      (PI (val ρ A) (CLOS ρ x B))]
