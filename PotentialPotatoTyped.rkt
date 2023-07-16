@@ -1,4 +1,5 @@
 #lang racket
+ (require racket/trace)
 
 ;imports for chapter 4 error handling, specifically go-on
 (require (for-syntax syntax/parse))
@@ -379,7 +380,8 @@
         ;added List nil and double colon
         'List
         '::
-        'nil))
+        'nil
+        'ind-List))
 
 ; x : keyword?
 (define (keyword? x)
@@ -522,6 +524,9 @@
 ; step : normal?
 (struct N-ind-Nat (target motive base step) #:transparent)
 
+;making a struct for ind-List
+(struct N-ind-List (target motive base step) #:transparent)
+
 ; target : neutral?
 ; motive : normal?
 ; base : normal?
@@ -613,6 +618,9 @@
     [`(add1 ,n) (ADD1 (val ρ n))]
     [`(ind-Nat ,target ,motive ,base ,step)
      (do-ind-Nat (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
+    ;evaluating a ind-List expression
+    [`(ind-List ,target ,motive ,base, step)
+     (do-ind-List (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
     [`(= ,A ,from ,to)
      (EQ (val ρ A) (val ρ from) (val ρ to))]
     ['same
@@ -707,6 +715,34 @@
                       (H-O-CLOS 'ih
                                 (lambda (ih)
                                   (do-ap motive (ADD1 n-1)))))))))
+;writing the code which actually returns the value of the ind-List
+;expression provided the values of the arguments
+(define (do-ind-List target motive base step)
+  (match target
+    [(NIL) base]
+    [(CONCAT:: hed res) (do-ap (do-ap (do-ap step hed) res) (do-ind-List res motive base step))]
+    [(NEU (LIST E) ne)
+     (NEU (do-ap motive target)
+          (N-ind-List
+           ne
+           (THE (PI (LIST E)
+                    (H-O-CLOS 'k (lambda (k) (UNI))))
+                motive)
+           (THE (do-ap motive (NIL)) base)
+           (THE (ind-List-step-type motive E)
+                step)))]))
+(define (ind-List-step-type motive E)
+  ;removed brackets from around E on line 735
+  (PI E
+      (H-O-CLOS 'hed
+                (lambda (hed)
+                  (PI (LIST E)
+                      (H-O-CLOS 'tal
+                                (lambda (tal)
+                                  (PI (do-ap motive tal)
+                                      (H-O-CLOS 'ih
+                                                (lambda (ih)
+                                                  (do-ap motive (CONCAT:: hed tal))))))))))))
 ; Γ : context?
 ; norm : norm?
 
@@ -779,6 +815,12 @@
                ,(read-back-norm Γ motive)
                ,(read-back-norm Γ base)
                ,(read-back-norm Γ step))]
+    ;added the readback for a ind-List expression
+    [(N-ind-List ne motive base step)
+     `(ind-List ,(read-back-neutral Γ ne)
+               ,(read-back-norm Γ motive)
+               ,(read-back-norm Γ base)
+               ,(read-back-norm Γ step))]
     [(N-replace ne motive base)
      `(replace ,(read-back-neutral Γ ne)
                ,(read-back-norm Γ motive)
@@ -837,6 +879,24 @@
                    (THE (UNI)
                         (do-ap motive-val (val (ctx->env Γ) target-out))))
                  (ind-Nat ,target-out ,motive-out ,base-out ,step-out))))]
+    ;adding synthesizing for ind-List
+    ;note that it needs to be figured out what the type of the list entries are, for now theres the
+    ;assumption that the target has the form `(the A B)
+    [`(ind-List ,target ,motive ,base ,step)
+     (go-on ([`(the ,target-t-t ,target-out-t) (synth Γ target)]
+             [entry-t (go (match (val (ctx->env Γ) target-t-t) [(LIST E) E]))]
+             [target-out (go target-out-t)]
+             [motive-out (check Γ motive (PI (LIST entry-t) (H-O-CLOS 'n (lambda (_) (UNI)))))]
+             [motive-val (go (val (ctx->env Γ) motive-out))]
+             [base-out (check Γ base (do-ap motive-val (NIL)))]
+             [step-out (check Γ
+                              step
+                              (ind-List-step-type motive-val entry-t))])
+            (go `(the ,(read-back-norm
+                   Γ
+                   (THE (UNI)
+                        (do-ap motive-val (val (ctx->env Γ) target-out))))
+                 (ind-List ,target-out ,motive-out ,base-out ,step-out))))]
     [`(= ,A ,from ,to)
      (go-on ([A-out (check Γ A (UNI))]
              [A-val (go (val (ctx->env Γ) A-out))]
@@ -997,11 +1057,33 @@
                                         (val ρ expr))))
            (go Γ))))]))
 
+
 (define (run-program Γ inputs)
   (match inputs
     ['() (go Γ)]
     [(cons d rest)
      (go-on ([new-Γ (interact Γ d)])
        (run-program new-Γ rest))]))
-
+(trace run-program)
 ;testing git
+
+;(run-program `() `((the (List Nat) (ind-List (the (List Nat) (:: zero nil))
+;                                               (the (Pi ((n (List Nat))) U) (lambda (n) (List Nat)))
+;                                               (the (List Nat) (:: zero nil))
+;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c (List Nat))) (List Nat)))) (lambda (t) (lambda (u) (lambda (v) v))))))))
+
+;(run-program `() `((the (Pi ((x (List Nat))) (List Nat)) (lambda (x) (ind-List (the (List Nat) (:: zero nil))
+;                                               (the (Pi ((n (List Nat))) U) (lambda (n) (List Nat)))
+;                                               (the (List Nat) (:: zero nil))
+;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c (List Nat))) (List Nat)))) (lambda (t) (lambda (u) (lambda (v) v)))))))))
+;(run-program `() `((define work (the (Pi ((x (List Nat))) (List Nat)) (lambda (x) (ind-List x
+;                                               (the (Pi ((n (List Nat))) U) (lambda (n) (List Nat)))
+;                                               (the (List Nat) x)
+;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c (List Nat))) (List Nat)))) (lambda (t) (lambda (u) (lambda (v) v))))))))(work (:: zero (:: zero nil)))))
+;(run-program `() `((define work (the (Pi ((x (List Nat))) (Pi ((pri (Σ ((x Nat)) Nat))) Nat))
+;                                       (lambda (x) (lambda (y) (ind-List
+;                                                                x
+;                                               (the (Pi ((n (List Nat))) U) (lambda (n) Nat))
+;                                               (car y)
+;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c Nat)) Nat))) (lambda (t) (lambda (u) (lambda (v) v )))))))))
+;                       ((work (:: zero (:: zero nil))) (cons zero zero))))
