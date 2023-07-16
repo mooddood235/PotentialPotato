@@ -1,4 +1,5 @@
 #lang racket
+ (require racket/trace)
 
 ;imports for chapter 4 error handling, specifically go-on
 (require (for-syntax syntax/parse))
@@ -731,7 +732,8 @@
            (THE (ind-List-step-type motive E)
                 step)))]))
 (define (ind-List-step-type motive E)
-  (PI (E)
+  ;removed brackets from around E on line 735
+  (PI E
       (H-O-CLOS 'hed
                 (lambda (hed)
                   (PI (LIST E)
@@ -1055,11 +1057,33 @@
                                         (val ρ expr))))
            (go Γ))))]))
 
+
 (define (run-program Γ inputs)
   (match inputs
     ['() (go Γ)]
     [(cons d rest)
      (go-on ([new-Γ (interact Γ d)])
        (run-program new-Γ rest))]))
-
+(trace run-program)
 ;testing git
+
+;(run-program `() `((the (List Nat) (ind-List (the (List Nat) (:: zero nil))
+;                                               (the (Pi ((n (List Nat))) U) (lambda (n) (List Nat)))
+;                                               (the (List Nat) (:: zero nil))
+;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c (List Nat))) (List Nat)))) (lambda (t) (lambda (u) (lambda (v) v))))))))
+
+;(run-program `() `((the (Pi ((x (List Nat))) (List Nat)) (lambda (x) (ind-List (the (List Nat) (:: zero nil))
+;                                               (the (Pi ((n (List Nat))) U) (lambda (n) (List Nat)))
+;                                               (the (List Nat) (:: zero nil))
+;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c (List Nat))) (List Nat)))) (lambda (t) (lambda (u) (lambda (v) v)))))))))
+;(run-program `() `((define work (the (Pi ((x (List Nat))) (List Nat)) (lambda (x) (ind-List x
+;                                               (the (Pi ((n (List Nat))) U) (lambda (n) (List Nat)))
+;                                               (the (List Nat) x)
+;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c (List Nat))) (List Nat)))) (lambda (t) (lambda (u) (lambda (v) v))))))))(work (:: zero (:: zero nil)))))
+;(run-program `() `((define work (the (Pi ((x (List Nat))) (Pi ((pri (Σ ((x Nat)) Nat))) Nat))
+;                                       (lambda (x) (lambda (y) (ind-List
+;                                                                x
+;                                               (the (Pi ((n (List Nat))) U) (lambda (n) Nat))
+;                                               (car y)
+;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c Nat)) Nat))) (lambda (t) (lambda (u) (lambda (v) v )))))))))
+;                       ((work (:: zero (:: zero nil))) (cons zero zero))))
