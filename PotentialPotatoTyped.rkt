@@ -432,7 +432,7 @@
 (define (val ρ e)
   (match e
     [`(the ,type ,expr) (val ρ expr)]
-    [`(match ,expr ,case0 ,case* ...)
+    [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
      (do-match expr case0 case*)]
     ['U (UNI)]
     [`(Π ((,x ,A)) ,B)
@@ -661,11 +661,14 @@
      (go-on ([t-out (check Γ type (UNI))]
              [e-out (check Γ expr (val (ctx->env Γ) t-out))])
        (go `(the ,t-out ,e-out)))]    
-    [`(match ,type ,expr ,case0 ,case* ...)
-     (go-on ([type-out (check Γ type (UNI))]
+    [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
+     (go-on ([type-in-out (check Γ type-in (UNI))]
+             [type-out-out (check Γ type-out (UNI))]
+             [expr-out (check Γ expr (val (ctx->env Γ) type-in-out))]
              [cases-out
-              (check-cases Γ (val (ctx->env Γ) type-out) (cons case0 case*))])
-            (go `(the ,type ,(append `(match ,type ,expr) (cons case0 case*)))))]                     
+              (check-cases Γ (val (ctx->env Γ) type-out-out) (cons case0 case*))])
+            (go `(the ,type-out-out
+                      ,(append `(match ,type-in-out ,type-out-out ,expr-out) (cons case0 case*)))))]                     
     ['U
      (go '(the U U))]
     [`(,(or 'Σ 'Sigma) ((,x ,A)) ,D)
