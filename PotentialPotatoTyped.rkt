@@ -642,6 +642,16 @@
      `(ind-Absurd (the Absurd ,(read-back-neutral Γ ne))
                   ,(read-back-norm Γ motive))]))
 
+
+(define (check-cases Γ type cases)
+  (match cases
+    [`() (go #t)]
+    [`(,case0 ,case* ...)
+     (match case0
+       [`(,m ,r) (go-on ([case0-out (check Γ r type)]
+                         [case*-out (check-cases Γ type case*)])
+                        (go #t))])]))
+    
 ; Γ : context?
 ; e : expr?
 
@@ -650,7 +660,12 @@
     [`(the ,type ,expr)
      (go-on ([t-out (check Γ type (UNI))]
              [e-out (check Γ expr (val (ctx->env Γ) t-out))])
-       (go `(the ,t-out ,e-out)))]
+       (go `(the ,t-out ,e-out)))]    
+    [`(match ,type ,expr ,case0 ,case* ...)
+     (go-on ([type-out (check Γ type (UNI))]
+             [cases-out
+              (check-cases Γ (val (ctx->env Γ) type-out) (cons case0 case*))])
+            (go `(the ,type ,(append `(match ,type ,expr) (cons case0 case*)))))]                     
     ['U
      (go '(the U U))]
     [`(,(or 'Σ 'Sigma) ((,x ,A)) ,D)
