@@ -433,7 +433,7 @@
   (match e
     [`(the ,type ,expr) (val ρ expr)]
     [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
-     (do-match expr case0 case*)]
+     (do-match (read-back-norm ρ (THE (val ρ type-in) (val ρ expr))) case0 case*)]
     ['U (UNI)]
     [`(Π ((,x ,A)) ,B)
      (PI (val ρ A) (CLOS ρ x B))]
