@@ -402,7 +402,7 @@
     [`(,m ,r)
      (if (do-match-aux expr m) r (match case*
                                    [`() #f]
-                                   [`(,case1 ,case** ...) (do-match case1 case**)]))]))
+                                   [`(,case1 ,case** ...) (do-match expr case1 case**)]))]))
 (define (do-match-aux e m)
   (cond
     [(and (list? e) (list? m)) (match-lists e m)]
