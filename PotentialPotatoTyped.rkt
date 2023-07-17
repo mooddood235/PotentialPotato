@@ -980,7 +980,7 @@
              [target-out (go target-out-t)]
              [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (VEC entry-t arg) (H-O-CLOS 'n (lambda (_) (UNI))))))))]
              [motive-val (go (val (ctx->env Γ) motive-out))]
-             [base-out (check Γ base ((do-ap motive-val (ZERO)) (NIL)))]
+             [base-out (check Γ base (do-ap (do-ap motive-val (ZERO)) (VECNIL)))]
              [step-out (check Γ
                               step
                               (ind-Vec-step-type motive-val entry-t))])
@@ -1172,6 +1172,7 @@
 ;(trace run-program)
 ;testing git
 
+;test cases for ind-List
 ;(run-program `() `((the (List Nat) (ind-List (the (List Nat) (:: zero nil))
 ;                                               (the (Pi ((n (List Nat))) U) (lambda (n) (List Nat)))
 ;                                               (the (List Nat) (:: zero nil))
@@ -1192,3 +1193,16 @@
 ;                                               (car y)
 ;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c Nat)) Nat))) (lambda (t) (lambda (u) (lambda (v) v )))))))))
 ;                       ((work (:: zero (:: zero nil))) (cons zero zero))))
+
+;test cases for ind-Vec
+;(run-program `() `((the (List Nat) (ind-Vec (the Nat (add1 zero))
+;                                             (the (Vec Nat (add1 zero)) (vec:: zero vecnil))
+;                                             (the (Pi ((k Nat)) (Pi ((n (Vec Nat k))) U)) (lambda (g) (lambda (n) (List Nat))))
+;                                             (the (List Nat) (:: zero nil))
+;                                             (the (Pi ((k Nat)) (Pi ((a Nat)) (Pi ((b (Vec Nat k))) (Pi ((c (List Nat))) (List Nat))))) (lambda (s) (lambda (t) (lambda (u) (lambda (v) v)))))))))
+;(run-program `() `((the (Pi ((n Nat)) Nat) (lambda (n) (ind-Vec (the Nat (add1 zero))
+;                                             (the (Vec Nat (add1 zero)) (vec:: n vecnil))
+;                                             (the (Pi ((k Nat)) (Pi ((n (Vec Nat k))) U)) (lambda (g) (lambda (n) Nat)))
+;                                             zero
+;                                             (the (Pi ((k Nat)) (Pi ((a Nat)) (Pi ((b (Vec Nat k))) (Pi ((c Nat)) Nat)))) (lambda (s) (lambda (t) (lambda (u) (lambda (v) t))))))))))
+
