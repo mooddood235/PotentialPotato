@@ -188,7 +188,7 @@
         'the 'match))
 
 (define a-matchables
-  (list 'zero))
+  (list 'zero 'Nat 'Atom))
 
 ; x : keyword?
 (define (keyword? x)
@@ -197,7 +197,7 @@
       #f))
 
 (define (a-matchable? x)
-  (if (or (memv x a-matchables) (list? x))
+  (if (or (or (memv x a-matchables) (list? x)) (arbitrary? x))
       #t
       #f))
   
@@ -405,12 +405,15 @@
                                    [`(,case1 ,case** ...) (do-match expr case1 case**)]))]))
 (define (do-match-aux e m)
   (cond
-    [(and (list? e) (list? m)) (match-lists e m)]
-    [(and (or (arbitrary? e) (a-matchable? e)) (arbitrary? m) #t)]
+    [(and (b-list? e) (b-list? m)) (match-lists e m)]
+    [(and (a-matchable? e) (arbitrary? m)) #t]
     [else (equal? e m)]))
     
 (define (arbitrary? e)
   (not (or (keyword? e) (list? e))))
+
+(define (b-list? e)
+  (and (list? e) (match e [`',s #f] [else #t])))
 
 (define (match-lists L0 L1)
   (if (not (= (list-length L0) (list-length L1)))
