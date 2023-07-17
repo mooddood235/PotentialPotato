@@ -654,7 +654,14 @@
        [`(,m ,r) (go-on ([case0-out (check Γ r type)]
                          [case*-out (check-cases Γ type case*)])
                         (go #t))])]))
-    
+
+(define (match-is-total cases)
+   (match cases
+    [`() #f]
+    [`(,case0 ,case* ...)
+     (match case0
+       [`(,m ,r) (if (arbitrary? m) #t (match-is-total case*))])]))
+
 ; Γ : context?
 ; e : expr?
 
@@ -670,8 +677,10 @@
              [expr-out (check Γ expr (val (ctx->env Γ) type-in-out))]
              [cases-out
               (check-cases Γ (val (ctx->env Γ) type-out-out) (cons case0 case*))])
+            (if (match-is-total (cons case0 case*))
             (go `(the ,type-out-out
-                      ,(append `(match ,type-in-out ,type-out-out ,expr-out) (cons case0 case*)))))]                     
+                      ,(append `(match ,type-in-out ,type-out-out ,expr-out) (cons case0 case*))))
+            (stop e "Match clause is not total. You must include an else case")))]
     ['U
      (go '(the U U))]
     [`(,(or 'Σ 'Sigma) ((,x ,A)) ,D)
