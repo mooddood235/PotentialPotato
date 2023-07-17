@@ -385,7 +385,8 @@
         ;adding vector vecnil and vec::
         'Vec
         'vecnil
-        'vec::))
+        'vec::
+        'ind-Vec))
 
 ; x : keyword?
 (define (keyword? x)
@@ -536,6 +537,9 @@
 ;making a struct for ind-List
 (struct N-ind-List (target motive base step) #:transparent)
 
+;making a struct for ind-Vec
+(struct N-ind-Vec (n target motive base step) #:transparent)
+
 ; target : neutral?
 ; motive : normal?
 ; base : normal?
@@ -634,6 +638,9 @@
     ;evaluating a ind-List expression
     [`(ind-List ,target ,motive ,base, step)
      (do-ind-List (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
+    ;evaluating a ind-Vec expression
+    [`(ind-Vec ,n ,target ,motive ,base, step)
+     (do-ind-Vec (val ρ n) (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
     [`(= ,A ,from ,to)
      (EQ (val ρ A) (val ρ from) (val ρ to))]
     ['same
@@ -756,6 +763,39 @@
                                       (H-O-CLOS 'ih
                                                 (lambda (ih)
                                                   (do-ap motive (CONCAT:: hed tal))))))))))))
+
+
+;writing the code which actually returns the value of the ind-Vec
+;expression provided the values of the arguments
+(define (do-ind-Vec n target motive base step)
+  (match target
+    [(VECNIL) base]
+    [(VCAT:: hed res) (match n [(ADD1 t) (do-ap (do-ap (do-ap (do-ap step t) hed) res) (do-ind-Vec t res motive base step))])]
+    [(NEU (VEC E k) ne)
+     (NEU ((do-ap motive n) target)
+          (N-ind-Vec
+           n
+           ne
+           (THE (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (LIST E)
+                    (H-O-CLOS 'k (lambda (k) (UNI)))))))
+                motive)
+           (THE (do-ap (do-ap motive (ZERO)) (VECNIL)) base)
+           (THE (ind-Vec-step-type motive E)
+                step)))]))
+
+(define (ind-Vec-step-type motive E)
+  ;removed brackets from around E on line 735
+  (PI (NAT) (H-O-CLOS 'arg (lambda (arg)
+      (PI E
+      (H-O-CLOS 'hed
+                (lambda (hed)
+                  (PI (VEC E arg)
+                      (H-O-CLOS 'tal
+                                (lambda (tal)
+                                  (PI (do-ap (do-ap motive arg) tal)
+                                      (H-O-CLOS 'ih
+                                                (lambda (ih)
+                                                  (do-ap (do-ap motive (ADD1 arg)) (VCAT:: hed tal)))))))))))))))
 ; Γ : context?
 ; norm : norm?
 
@@ -835,11 +875,22 @@
                ,(read-back-norm Γ base)
                ,(read-back-norm Γ step))]
     ;added the readback for a ind-List expression
+    ;but this once again is reading back step as a normal expression, but what if its neutral?
     [(N-ind-List ne motive base step)
      `(ind-List ,(read-back-neutral Γ ne)
                ,(read-back-norm Γ motive)
                ,(read-back-norm Γ base)
                ,(read-back-norm Γ step))]
+    ;added the readback for a ind-Vec expression
+    ;not sure whether to read both n and ne as neutral or pick one of them, should test both
+    ;what if readback norm just defaults to readback neutral if its actually neutral?
+    [(N-ind-Vec n ne motive base step)
+     `(ind-Vec ,(read-back-neutral Γ n)
+               ,(read-back-neutral Γ ne)
+               ,(read-back-norm Γ motive)
+               ,(read-back-norm Γ base)
+               ,(read-back-norm Γ step))]
+    
     [(N-replace ne motive base)
      `(replace ,(read-back-neutral Γ ne)
                ,(read-back-norm Γ motive)
@@ -919,6 +970,25 @@
                    (THE (UNI)
                         (do-ap motive-val (val (ctx->env Γ) target-out))))
                  (ind-List ,target-out ,motive-out ,base-out ,step-out))))]
+    ;adding synthesizing for ind-Vec
+    ;note that it needs to be figured out what the type of the vec entries are, for now theres the
+    ;assumption that the target has the form `(the A B)
+    [`(ind-Vec ,n ,target ,motive ,base ,step)
+     (go-on ([n-out (check Γ n (NAT))]
+             [`(the ,target-t-t ,target-out-t) (synth Γ target)]
+             [entry-t (go (match (val (ctx->env Γ) target-t-t) [(VEC E n) E]))]
+             [target-out (go target-out-t)]
+             [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (VEC entry-t arg) (H-O-CLOS 'n (lambda (_) (UNI))))))))]
+             [motive-val (go (val (ctx->env Γ) motive-out))]
+             [base-out (check Γ base (do-ap (do-ap motive-val (ZERO)) (VECNIL)))]
+             [step-out (check Γ
+                              step
+                              (ind-Vec-step-type motive-val entry-t))])
+            (go `(the ,(read-back-norm
+                   Γ
+                   (THE (UNI)
+                        (do-ap (do-ap motive-val (val (ctx->env Γ) n-out)) (val (ctx->env Γ) target-out))))
+                 (ind-Vec ,n-out ,target-out ,motive-out ,base-out ,step-out))))]
     [`(= ,A ,from ,to)
      (go-on ([A-out (check Γ A (UNI))]
              [A-val (go (val (ctx->env Γ) A-out))]
@@ -1102,6 +1172,7 @@
 ;(trace run-program)
 ;testing git
 
+;test cases for ind-List
 ;(run-program `() `((the (List Nat) (ind-List (the (List Nat) (:: zero nil))
 ;                                               (the (Pi ((n (List Nat))) U) (lambda (n) (List Nat)))
 ;                                               (the (List Nat) (:: zero nil))
@@ -1122,3 +1193,16 @@
 ;                                               (car y)
 ;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c Nat)) Nat))) (lambda (t) (lambda (u) (lambda (v) v )))))))))
 ;                       ((work (:: zero (:: zero nil))) (cons zero zero))))
+
+;test cases for ind-Vec
+;(run-program `() `((the (List Nat) (ind-Vec (the Nat (add1 zero))
+;                                             (the (Vec Nat (add1 zero)) (vec:: zero vecnil))
+;                                             (the (Pi ((k Nat)) (Pi ((n (Vec Nat k))) U)) (lambda (g) (lambda (n) (List Nat))))
+;                                             (the (List Nat) (:: zero nil))
+;                                             (the (Pi ((k Nat)) (Pi ((a Nat)) (Pi ((b (Vec Nat k))) (Pi ((c (List Nat))) (List Nat))))) (lambda (s) (lambda (t) (lambda (u) (lambda (v) v)))))))))
+;(run-program `() `((the (Pi ((n Nat)) Nat) (lambda (n) (ind-Vec (the Nat (add1 zero))
+;                                             (the (Vec Nat (add1 zero)) (vec:: n vecnil))
+;                                             (the (Pi ((k Nat)) (Pi ((n (Vec Nat k))) U)) (lambda (g) (lambda (n) Nat)))
+;                                             zero
+;                                             (the (Pi ((k Nat)) (Pi ((a Nat)) (Pi ((b (Vec Nat k))) (Pi ((c Nat)) Nat)))) (lambda (s) (lambda (t) (lambda (u) (lambda (v) t))))))))))
+
