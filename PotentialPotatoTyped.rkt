@@ -345,6 +345,8 @@
 ; motive : normal?
 (struct N-ind-Absurd (target motive) #:transparent)
 
+(struct N-match (type-in type-out expr case0 case*) #:transparent)
+
 ; type : value?
 ; val : value?
 (struct THE (type val) #:transparent)
@@ -436,7 +438,10 @@
   (match e
     [`(the ,type ,expr) (val ρ expr)]
     [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
-     (val ρ (do-match (read-back-norm ρ (THE (val ρ type-in) (val ρ expr))) case0 case*))]
+     (let ([expr-val (val ρ expr)])
+       (if (NEU? expr-val)
+           (NEU (val ρ type-out) (N-match type-in type-out expr case0 case*))
+           (val ρ (do-match (read-back-norm ρ (THE (val ρ type-in) expr-val)) case0 case*))))]
     ['U (UNI)]
     [`(Π ((,x ,A)) ,B)
      (PI (val ρ A) (CLOS ρ x B))]
@@ -637,6 +642,8 @@
                ,(read-back-norm Γ step))]
     [(N-+ x y)
      `(+ ,(read-back-neutral Γ x) ,(read-back-neutral Γ y))]
+    [(N-match type-in type-out expr case0 case*)
+     (append `(match ,type-in ,type-out ,expr) (cons case0 case*))]
     [(N-replace ne motive base)
      `(replace ,(read-back-neutral Γ ne)
                ,(read-back-norm Γ motive)
