@@ -399,13 +399,52 @@
     [(CLOS ρ x e) (val (extend ρ x v) e)]
     [(H-O-CLOS x f) (f v)]))
 
-(define (do-match expr case0 case*)
-  (match case0
+(define (do-match ρ type-in type-out expr case0 case*)
+  (let ([expr-val (val ρ expr)])
+       (if (NEU? expr-val)
+           (NEU (val ρ type-out) (N-match type-in type-out expr case0 case*))
+           (let* ([case-out (match-cases (read-back-norm ρ (THE (val ρ type-in) expr-val)) case0 case*)]
+                  [r-out (replace-arbitraries expr case-out)])
+           (val ρ r-out)))))
+
+(define (replace-arbitraries expr case)
+  (match case
+    [`(,m ,r) (replace-arbitraries-expr (arbitrary-to-expr expr m) r)]))
+
+
+(define (replace-arbitraries-expr a-to-e r)
+  (cond
+    [(arbitrary? r) (match (cdr (assv r a-to-e)) [`(,e) e])]
+    [(b-list? r) (replace-arbitraries-list a-to-e r)]
+    [else r]))
+
+(define (replace-arbitraries-list a-to-e r)
+  (match r
+    [`(,r0 ,rs ...)
+     (append (list (replace-arbitraries-expr a-to-e r0)) (replace-arbitraries-list a-to-e rs))]
+    [`() `()]))
+
+(define (arbitrary-to-expr expr m)
+  (cond
+    [(arbitrary? m) `(,(list m expr))]
+    [(b-list? m) (list-arbitrary-to-expr expr m)]
+    [else `()]))
+
+(define (list-arbitrary-to-expr expr m)
+  (match m
+    [`(,m0 ,m* ...)
+     (match expr [`(,e0 ,e* ...)
+                  (append (arbitrary-to-expr e0 m0) (list-arbitrary-to-expr e* m*))])]
+    [`() `()]))
+
+(define (match-cases expr case0 case*)
+   (match case0
     [`(,m ,r)
-     (if (do-match-aux expr m) r (match case*
+     (if (match-exprs expr m) case0 (match case*
                                    [`() #f]
-                                   [`(,case1 ,case** ...) (do-match expr case1 case**)]))]))
-(define (do-match-aux e m)
+                                   [`(,case1 ,case** ...) (match-cases expr case1 case**)]))]))
+
+(define (match-exprs e m)
   (cond
     [(and (b-list? e) (b-list? m)) (match-lists e m)]
     [(and (a-matchable? e) (arbitrary? m)) #t]
@@ -424,7 +463,7 @@
         [`(,x ,x* ...)
          (match L1
            [`(,y ,y* ...)
-            (and (do-match-aux x y) (match-lists x* y*))])]
+            (and (match-exprs x y) (match-lists x* y*))])]
         [`() #t])))
 
 (define (list-length L)
@@ -438,10 +477,7 @@
   (match e
     [`(the ,type ,expr) (val ρ expr)]
     [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
-     (let ([expr-val (val ρ expr)])
-       (if (NEU? expr-val)
-           (NEU (val ρ type-out) (N-match type-in type-out expr case0 case*))
-           (val ρ (do-match (read-back-norm ρ (THE (val ρ type-in) expr-val)) case0 case*))))]
+     (do-match ρ type-in type-out expr case0 case*)]
     ['U (UNI)]
     [`(Π ((,x ,A)) ,B)
      (PI (val ρ A) (CLOS ρ x B))]
