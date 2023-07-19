@@ -689,14 +689,68 @@
                   ,(read-back-norm Γ motive))]))
 
 
-(define (check-cases Γ type cases)
+(define (check-cases Γ type-in type-out cases)
   (match cases
     [`() (go #t)]
     [`(,case0 ,case* ...)
-     (match case0
-       [`(,m ,r) (go-on ([case0-out (check Γ r type)]
-                         [case*-out (check-cases Γ type case*)])
-                        (go #t))])]))
+       (match case0
+         [`(,m ,r) (let ([m-arbitraries (get-arbitraries m)]
+                         [r-arbitraries (get-arbitraries r)])
+                     (go-on ([m-arbitraries-out (check-dups m m-arbitraries)]
+                             [valid-binding-out (valid-binding m r m-arbitraries r-arbitraries)]
+                             [r-out
+                              (check-result-type Γ m r type-in type-out m-arbitraries r-arbitraries)]
+                             [case*-out (check-cases Γ type-in type-out case*)])
+                            (go cases)))])]))
+
+(define (valid-binding m r m-a r-a)
+  (if (empty? r-a) (go #t)
+      (cond
+        [(not (subset? (list->set r-a) (list->set m-a)))
+         (stop r "Arbitraries must be a subset of the arbitraries in the match check.")]
+        [(not (match m
+                [`(add1 ,n) #t]
+                [n #t]))
+         (stop m "You cannot bind variables from this match-check.")]
+        [else (go #t)])))
+
+(define (check-result-type Γ m r type-in type-out m-a r-a)
+  (if (empty? r-a)
+      (check Γ r type-out)
+      (let* ([a-to-f (arbitraries-to-fresh r-a Γ)]
+             [extended-ctx (extend-ctx-arbitraries-to-fresh Γ m a-to-f type-in)]
+             [r-out (replace-arbitraries-expr a-to-f r)])
+        (check extended-ctx r-out type-out))))
+      
+(define (extend-ctx-arbitraries-to-fresh Γ m arbitraries-to-fresh type-in)
+  (match arbitraries-to-fresh
+    [`() Γ]
+    [`(,a-to-f0 ,a-to-f* ...)
+     (match a-to-f0
+       [`(,a ,f) (extend-ctx
+                  (extend-ctx-arbitraries-to-fresh Γ m a-to-f* type-in) f
+                  (get-type-a m a type-in))])]))
+
+(define (get-type-a m a type-in)
+  (match m
+    [`(add1 ,n) (NAT)]
+    [n type-in]))
+
+(define (arbitraries-to-fresh arbitraries Γ)
+  (map (lambda (a)
+         `(,a ,(freshen (map car Γ) a))) (remove-duplicates arbitraries)))
+
+(define (get-arbitraries m)
+     (cond
+       [(arbitrary? m) `(,m)]
+       [(b-list? m) (match m
+                      [`(,m0 ,m* ...) (append (get-arbitraries m0) (get-arbitraries m*))]
+                      [`() `()])]
+       [else `()]))
+
+(define (check-dups m L)
+  (if (check-duplicates L) (stop m "No duplicate arbitraries are allowed in match checks.")
+      (go L)))
 
 (define (match-is-total cases)
    (match cases
@@ -719,7 +773,8 @@
              [type-out-out (check Γ type-out (UNI))]
              [expr-out (check Γ expr (val (ctx->env Γ) type-in-out))]
              [cases-out
-              (check-cases Γ (val (ctx->env Γ) type-out-out) (cons case0 case*))])
+              (check-cases Γ (val (ctx->env Γ) type-in-out) (val (ctx->env Γ) type-out-out)
+                                  (cons case0 case*))])
             (if (match-is-total (cons case0 case*))
             (go `(the ,type-out-out
                       ,(append `(match ,type-in-out ,type-out-out ,expr-out) (cons case0 case*))))
