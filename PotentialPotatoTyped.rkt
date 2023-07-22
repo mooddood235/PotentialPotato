@@ -474,7 +474,7 @@
 ; symbol : symbol?
 (struct QUOTE (symbol) #:transparent)
 
-(struct UNI () #:transparent)
+(struct UNI (level) #:transparent)
 
 ; type : value?
 ; neutral : neutral?
@@ -580,7 +580,7 @@
   (match e
     [`(the ,type ,expr)
      (val ρ expr)]
-    ['U (UNI)]
+    [`(U ,lvl) (UNI (val ρ lvl))]
     [`(Π ((,x ,A)) ,B)
      (PI (val ρ A) (CLOS ρ x B))]
     [`(λ (,x) ,b)
@@ -644,10 +644,12 @@
 ; target : value?
 ; motive : value?
 
+;added uni arg, what if i want to be able to show that it implies statements of higher types??
+;okay now you have to add a (the blah blah) when describing ur motive lol
 (define (do-ind-Absurd target motive)
   (match target
     [(NEU (ABSURD) ne)
-     (NEU motive (N-ind-Absurd ne (THE (UNI) motive)))]))
+     (NEU motive (N-ind-Absurd ne (THE (UNI (ZERO)) motive)))]))
 
 ; target : value?
 ; motive : value?
@@ -659,7 +661,7 @@
     [(NEU (EQ A from to) ne)
      (NEU (do-ap motive to)
           (N-replace ne
-                     (THE (PI A (H-O-CLOS 'x (lambda (_) (UNI))))
+                     (THE (PI A (H-O-CLOS 'x (lambda (_) (UNI (ZERO)))))
                           motive)
                      (THE (do-ap motive from)
                           base)))]))
@@ -677,7 +679,7 @@
           (N-ind-Nat
            ne
            (THE (PI (NAT)
-                    (H-O-CLOS 'k (lambda (k) (UNI))))
+                    (H-O-CLOS 'k (lambda (k) (UNI (ZERO)))))
                 motive)
            (THE (do-ap motive (ZERO)) base)
            (THE (ind-Nat-step-type motive)
@@ -695,6 +697,7 @@
 ; Γ : context?
 ; norm : norm?
 
+;added some (UNI n)s but this might have to be modified slightly
 (define (read-back-norm Γ norm)
   (match norm
     [(THE (NAT) (ZERO)) 'zero]
@@ -718,27 +721,29 @@
            ,(read-back-neutral Γ ne))]
     [(THE (EQ A from to) (SAME)) 'same]
     [(THE (ATOM) (QUOTE x)) `',x]
-    [(THE (UNI) (NAT)) 'Nat]
-    [(THE (UNI) (ATOM)) 'Atom]
-    [(THE (UNI) (TRIVIAL)) 'Trivial]
-    [(THE (UNI) (ABSURD)) 'Absurd]
-    [(THE (UNI) (EQ A from to))
-     `(= ,(read-back-norm Γ (THE (UNI) A))
+    [(THE (UNI n) (NAT)) 'Nat]
+    [(THE (UNI n) (ATOM)) 'Atom]
+    [(THE (UNI n) (TRIVIAL)) 'Trivial]
+    [(THE (UNI n) (ABSURD)) 'Absurd]
+    [(THE (UNI n) (EQ A from to))
+     `(= ,(read-back-norm Γ (THE (UNI n) A))
          ,(read-back-norm Γ (THE A from))
          ,(read-back-norm Γ (THE A to)))]
-    [(THE (UNI) (SIGMA A D))
+    ;the issue here might be that A is a (UNI n) and D is a lower UNI by im assignning them both the high UNI, this is a
+    ;variance rules thing
+    [(THE (UNI n) (SIGMA A D))
      (define x (closure-name D))
      (define y (freshen (map car Γ) x))
-     `(Σ ((,y ,(read-back-norm Γ (THE (UNI) A))))
+     `(Σ ((,y ,(read-back-norm Γ (THE (UNI n) A))))
          ,(read-back-norm (extend-ctx Γ y A)
-                          (THE (UNI) (val-of-closure D (NEU A (N-var y))))))]
-    [(THE (UNI) (PI A B))
+                          (THE (UNI n) (val-of-closure D (NEU A (N-var y))))))]
+    [(THE (UNI n) (PI A B))
      (define x (closure-name B))
      (define y (freshen (map car Γ) x))
-     `(Π ((,y ,(read-back-norm Γ (THE (UNI) A))))
+     `(Π ((,y ,(read-back-norm Γ (THE (UNI n) A))))
          ,(read-back-norm (extend-ctx Γ y A)
-                          (THE (UNI) (val-of-closure B (NEU A (N-var y))))))]
-    [(THE (UNI) (UNI)) 'U]
+                          (THE (UNI n) (val-of-closure B (NEU A (N-var y))))))]
+    [(THE (UNI (ADD1 n)) (UNI n)) '(U ,n)]
     [(THE t1 (NEU t2 ne))
      (read-back-neutral Γ ne)]))
 
@@ -772,34 +777,48 @@
 (define (synth Γ e)
   (match e
     [`(the ,type ,expr)
-     (go-on ([t-out (check Γ type (UNI))]
+     (go-on ([`(the ,typeoftype ,ty) (synth Γ type)]
+             [`(U, n) (U-check Γ typeoftype)]
+             ;this next line might be useless, why not just use typeoftype?
+             [t-out (check Γ type (UNI (val (ctx->env Γ) n)))]
              [e-out (check Γ expr (val (ctx->env Γ) t-out))])
        (go `(the ,t-out ,e-out)))]
-    ['U
-     (go '(the U U))]
+    [`(U ,n)
+     (go `(the (U (add1 ,n)) (U ,n)))]
     [`(,(or 'Σ 'Sigma) ((,x ,A)) ,D)
-     (go-on ([A-out (check Γ A (UNI))]
-             [D-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) D (UNI))])
-       (go `(the U (Σ ((,x ,A-out)) ,D-out))))]
+     (go-on ([`(the ,A-type A-temp) (synth Γ A)]
+             [`(U ,n) (U-check Γ A-type)]
+             [A-out (check Γ A (UNI (val (ctx->env Γ) n)))]
+             
+             [`(the ,D-type D-temp) (synth (extend-ctx Γ x (val (ctx->env Γ) A-out)) D)]
+             [`(U ,k) (U-check Γ D-type)]
+             [D-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) D (UNI (check Γ A (UNI (val (ctx->env Γ) n)))))])
+            
+       (go `(the (U ,(greater-Nat (cdr (cdr A-out)) (cdr (cdr D-out)))) (Σ ((,x ,(car A-out))) ,(car D-out)))))]
     [`(car ,pr)
-     (go-on ([`(the ,pr-ty ,pr-out) (synth Γ pr)])
+     (go-on ([`(the ,pr-ty ,pr-out) (synth Γ pr)]
+             [`(the ,pr-ty-ty ,stuff) (synth Γ pr-ty)])
        (match (val (ctx->env Γ) pr-ty)
          [(SIGMA A D)
-          (go `(the ,(read-back-norm Γ (THE (UNI) A)) (car ,pr-out)))]
+          (go `(the ,(read-back-norm Γ (THE (val (ctx->env Γ) pr-ty-ty) A)) (car ,pr-out)))]
          [non-SIGMA
           (stop e (format "Expected Σ, got ~v"
-                          (read-back-norm Γ (THE (UNI) non-SIGMA))))]))]
+                          (read-back-norm Γ (THE (val (ctx->env Γ) pr-ty-ty) non-SIGMA))))]))]
+    ;spaghetti! this can definitely be cut down a bit
     [`(cdr ,pr)
-     (go-on ([`(the ,pr-ty ,pr-out) (synth Γ pr)])
+     (go-on ([`(the ,pr-ty ,pr-out) (synth Γ pr)]
+             [`(the ,type-of-type ,ty) (synth Γ pr-ty)]
+             [M-expr (go (match ty [`(,(or 'Σ 'Sigma) ((,x ,A)) ,M) M]))]
+             [`(the ,d-type ,d) (synth Γ M-expr)])
        (match (val (ctx->env Γ) pr-ty)
          [(SIGMA A D)
           (define the-car (do-car (val (ctx->env Γ) pr-out)))
-          (go `(the ,(read-back-norm Γ (THE (UNI) (val-of-closure D the-car)))
+          (go `(the ,(read-back-norm Γ (THE (val (ctx->env Γ) d-type) (val-of-closure D the-car)))
                     (cdr ,pr-out)))]
          [non-SIGMA
           (stop e (format "Expected Σ, got ~v"
-                          (read-back-norm Γ (THE (UNI) non-SIGMA))))]))]
-    ['Nat (go '(the U Nat))]
+                          (read-back-norm Γ (THE (val (ctx->env Γ) type-of-type) non-SIGMA))))]))]
+    ['Nat (go '(the (U zero) Nat))]
     [`(ind-Nat ,target ,motive ,base ,step)
      (go-on ([target-out (check Γ target (NAT))]
              [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'n (lambda (_) (UNI)))))]
@@ -833,10 +852,11 @@
                       (replace ,target-out ,motive-out ,base-out))))]
          [non-EQ
           (stop target (format "Expected =, but type is ~a" non-EQ))]))]
+    ;need to take the max of the types U, Uof(A) and Uof(B)
     [`(,(or 'Π 'Pi) ((,x ,A)) ,B)
-     (go-on ([A-out (check Γ A (UNI))]
-             [B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI))])
-       (go `(the U (Π ((,x ,A-out)) ,B-out))))]
+     (go-on ([A-out (check Γ A (UNI (ZERO)) #t)]
+             [B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI (ZERO)) #t)])
+       (go `(the (U ,(greater-Nat (cdr (cdr A-out)) (cdr (cdr B-out)))) (Π ((,x ,(car A-out))) ,(car B-out)))))]
     ['Trivial (go '(the U Trivial))]
     ['Absurd (go '(the U Absurd))]
     [`(ind-Absurd ,target ,motive)
@@ -864,9 +884,25 @@
     [none-of-the-above (stop e "Can't synthesize a type")]))
 
 
+(define (greater-Nat A B)
+  (match* (A B)
+    [(`(add1 ,n ) `(add1 ,k ))  `(add1 ,(greater-Nat k n))]
+    [(`zero `(add1 ,k)) `(add1 ,k)]
+    [(`(add1 ,k) zero) `(add1 ,k)]))
+
+
+
 ; Γ : context?
 ; e : expr?
 ; t : value?
+
+;i can add some subsumption here
+;if bool is true, that means you want to check which universe it *is* an element of. returns a (cons (go whatever) `(U n))
+;note that the synth call here might be a bit circular
+(define (U-check Γ expr)
+  (match expr
+    [`(U ,n) (go `(U ,n))]
+    [non-U (stop expr (format "Expected (U n) got ~v" (read-back-norm Γ (val (ctx->env Γ) (synth Γ expr) non-U))))]))
 
 (define (check Γ e t)
   (match e
@@ -964,3 +1000,6 @@
     [(cons d rest)
      (go-on ([new-Γ (interact Γ d)])
        (run-program new-Γ rest))]))
+
+
+;(the (Pi ((x Absurd)) (Pi ((y U_1)) U_1)) (lambda (x) (lambda (y) (ind-Absurd x y))))
