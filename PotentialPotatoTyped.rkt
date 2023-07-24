@@ -400,12 +400,12 @@
     [(H-O-CLOS x f) (f v)]))
 
 (define (do-match ρ type-in type-out expr case0 case*)
-  (let ([expr-val (val ρ expr)])
-       (if (NEU? expr-val)
-           (NEU (val ρ type-out) (N-match type-in type-out expr case0 case*))
-           (let* ([case-out (match-cases (read-back-norm ρ (THE (val ρ type-in) expr-val)) case0 case*)]
-                  [r-out (replace-arbitraries expr case-out)])
-           (val ρ r-out)))))
+  (if (NEU? expr)
+      (NEU (val ρ type-out) (N-match type-in type-out (match expr [(NEU X ne) ne]) case0 case*))
+      (let* ([expr-norm (read-back-norm ρ (THE (val ρ type-in) expr))]
+             [case-out (match-cases expr-norm case0 case*)]
+             [r-out (replace-arbitraries expr-norm case-out)])
+        (val ρ r-out))))
 
 (define (replace-arbitraries expr case)
   (match case
@@ -477,7 +477,7 @@
   (match e
     [`(the ,type ,expr) (val ρ expr)]
     [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
-     (do-match ρ type-in type-out expr case0 case*)]
+     (do-match ρ type-in type-out (val ρ expr) case0 case*)]
     ['U (UNI)]
     [`(Π ((,x ,A)) ,B)
      (PI (val ρ A) (CLOS ρ x B))]
@@ -679,7 +679,7 @@
     [(N-+ x y)
      `(+ ,(read-back-neutral Γ x) ,(read-back-neutral Γ y))]
     [(N-match type-in type-out expr case0 case*)
-     (append `(match ,type-in ,type-out ,expr) (cons case0 case*))]
+     (append `(match ,type-in ,type-out ,(read-back-neutral Γ expr)) (cons case0 case*))]
     [(N-replace ne motive base)
      `(replace ,(read-back-neutral Γ ne)
                ,(read-back-norm Γ motive)
