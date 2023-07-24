@@ -821,7 +821,9 @@
     ['Nat (go '(the (U zero) Nat))]
     [`(ind-Nat ,target ,motive ,base ,step)
      (go-on ([target-out (check Γ target (NAT))]
-             [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'n (lambda (_) (UNI)))))]
+             [`(the (,(or 'Π 'Pi) ((,x ,A)) ,B) ,mot) (synth Γ motive)]
+             [`(u ,n) (U-check B)]
+             [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'n (lambda (_) (UNI (val (ctx->env Γ) n))))))]
              [motive-val (go (val (ctx->env Γ) motive-out))]
              [base-out (check Γ base (do-ap motive-val (ZERO)))]
              [step-out (check Γ
@@ -829,41 +831,62 @@
                               (ind-Nat-step-type motive-val))])
        (go `(the ,(read-back-norm
                    Γ
-                   (THE (UNI)
+                   (THE (UNI (val (ctx->env Γ) n))
                         (do-ap motive-val (val (ctx->env Γ) target-out))))
                  (ind-Nat ,target-out ,motive-out ,base-out ,step-out))))]
     [`(= ,A ,from ,to)
-     (go-on ([A-out (check Γ A (UNI))]
-             [A-val (go (val (ctx->env Γ) A-out))]
+     (go-on ([`(the ,A-t ,A-temp) (synth Γ A)]
+             [`(U ,n) (U-check A-t)]
+             [A-out (check A-temp (UNI (val (ctx->env Γ) n) ))]
+             [A-val (go (val (ctx->env Γ) A))]
              [from-out (check Γ from A-val)]
              [to-out (check Γ to A-val)])
-       (go `(the U (= ,A-out ,from-out ,to-out))))]
+       (go `(the (U ,n) (= ,A-out ,from-out ,to-out))))]
+    ;type is directly syntehsized for the motive, this feels a bit inneficient, but its necessary so it allows more complex statements
+    ;would be better if it was also considered where i can synthesize the base and the to and take the max fo the two types
+    ;or i can apply motive to the from and to and then synthesize a type for both and then take the max of the two
     [`(replace ,target ,motive ,base)
      (go-on ([`(the ,target-t ,target-out) (synth Γ target)])
        (match (val (ctx->env Γ) target-t)
          [(EQ A from to)
-          (go-on ([motive-out
+          (go-on ([`(,(or 'Π 'Pi) ((,k ,S)) ,M) (synth Γ motive)]
+                  [`(U ,n) (U-check M)]
+                  [motive-out
                    (check Γ
                           motive
-                          (PI A (H-O-CLOS 'x (lambda (x) (UNI)))))]
+                          (PI A (H-O-CLOS 'x (lambda (x) (UNI (val (ctx->env Γ) n))))))]
                   [motive-v (go (val (ctx->env Γ) motive-out))]
                   [base-out (check Γ base (do-ap motive-v from))])
-            (go `(the ,(read-back-norm Γ (THE (UNI) (do-ap motive-v to)))
+            (go `(the ,(read-back-norm Γ (THE (UNI (val (ctx->env Γ) n)) (do-ap motive-v to)))
                       (replace ,target-out ,motive-out ,base-out))))]
          [non-EQ
           (stop target (format "Expected =, but type is ~a" non-EQ))]))]
     ;need to take the max of the types U, Uof(A) and Uof(B)
     [`(,(or 'Π 'Pi) ((,x ,A)) ,B)
-     (go-on ([A-out (check Γ A (UNI (ZERO)) #t)]
-             [B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI (ZERO)) #t)])
+     
+     (go-on ([`(the ,A-type A-temp) (synth Γ A)]
+             [`(U ,n) (U-check Γ A-type)]
+             [A-out (check Γ A (UNI (val (ctx->env Γ) n)))]
+             
+             [`(the ,B-type B-temp) (synth (extend-ctx Γ x (val (ctx->env Γ) A-out)) B)]
+             [`(U ,k) (U-check Γ B-type)]
+             [B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI (check Γ A (UNI (val (ctx->env Γ) n)))))])
+            
        (go `(the (U ,(greater-Nat (cdr (cdr A-out)) (cdr (cdr B-out)))) (Π ((,x ,(car A-out))) ,(car B-out)))))]
-    ['Trivial (go '(the U Trivial))]
-    ['Absurd (go '(the U Absurd))]
+
+     ;(go-on ([A-out (check Γ A (UNI (ZERO)) #t)]
+     ;        [B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI (ZERO)) #t)])
+     ;  (go `(the (U ,(greater-Nat (cdr (cdr A-out)) (cdr (cdr B-out)))) (Π ((,x ,(car A-out))) ,(car B-out)))))]
+    ['Trivial (go '(the (U zero) Trivial))]
+    ['Absurd (go '(the (U zero) Absurd))]
     [`(ind-Absurd ,target ,motive)
      (go-on ([target-out (check Γ target (ABSURD))]
-             [motive-out (check Γ motive (UNI))])
+             [`(the ,A ,B) (synth Γ motive)]
+             [`(U ,n) (U-check A)]
+             ;this next line is probably redundant, try and remove some useless stuff
+             [motive-out (check Γ motive (UNI (val (ctx->env Γ) n)))])
        (go `(the ,motive-out (ind-Absurd ,target-out ,motive-out))))]
-    ['Atom (go '(the U Atom))]
+    ['Atom (go '(the (U zero) Atom))]
     [`(,rator ,rand)
      (go-on ([`(the ,rator-t ,rator-out) (synth Γ rator)])
        (match (val (ctx->env Γ) rator-t)
@@ -955,7 +978,9 @@
                                  (read-back-norm Γ (THE (UNI) non-ATOM))))])]
     [none-of-the-above
      (go-on ([`(the ,t-out ,e-out) (synth Γ e)]
-             [_ (convert Γ (UNI) t (val (ctx->env Γ) t-out))])
+             [`(the ,t-of-t ,temp) (synth Γ t-out)]
+             [`(U ,n) (U-check t-of-t)]
+             [_ (convert Γ (UNI (val (ctx->env Γ) n)) t (val (ctx->env Γ) t-out))])
        (go e-out))]))
 
 ; t : value?
@@ -968,7 +993,7 @@
   (if (α-equiv? e1 e2)
       (go 'ok)
       (stop e1 (format "Expected to be the same ~v as ~v"
-                       (read-back-norm Γ (THE (UNI) t))
+                       (read-back-norm Γ (THE (match t [(UNI n) (UNI (ADD1 n))]) t))
                        e2))))
 
 ; Γ : context?
