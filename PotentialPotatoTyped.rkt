@@ -602,7 +602,10 @@
      (EQ (val ρ A) (val ρ from) (val ρ to))]
     ['same
      (SAME)]
+    ;it might be necessary to synthesize the motive to know the type of certain things,
+    ;but this could mean excessive annotations unfortunately so you should test it out a bit
     [`(replace ,target ,motive ,base)
+     
      (do-replace (val ρ target) (val ρ motive) (val ρ base))]
     ['Trivial (TRIVIAL)]
     ['sole (SOLE)]
@@ -646,6 +649,9 @@
 
 ;added uni arg, what if i want to be able to show that it implies statements of higher types??
 ;okay now you have to add a (the blah blah) when describing ur motive lol
+;alright new update, it seems as if the UNI ZERO part here is only for the purposes of readback neutral
+;and readback neutral doesn't really care about the type of the UNI, so it seems like it would actually be fine
+;if i just left the UNI ZERO here even thought i can use types which involve higher uni levels
 (define (do-ind-Absurd target motive)
   (match target
     [(NEU (ABSURD) ne)
@@ -655,6 +661,10 @@
 ; motive : value?
 ; base : value?
 
+
+;i think ill need to synth the type of the motive if im allowing the motive to return higher types like U_1 etc.
+;update: once again it seems that this uni thing in the h-o-clos doesnt actually get used and it goes into the readback neutral eventualy
+;but the readbacknorm doesn't use it
 (define (do-replace target motive base)
   (match target
     [(SAME) base]
@@ -670,6 +680,8 @@
 ; base : value?
 ; step : value?
 
+;similar to the other do-functions, the hard coded UNI is not proper, but its unnecessary to make the n-value correct
+;since it eventually endds up in readbacknorm or something which doesn't care about the actual n value
 (define (do-ind-Nat target motive base step)
   (match target
     [(ZERO) base]
@@ -698,6 +710,7 @@
 ; norm : norm?
 
 ;added some (UNI n)s but this might have to be modified slightly
+;alright, so it doesn't even seem like this function ever cares about the UNI type
 (define (read-back-norm Γ norm)
   (match norm
     [(THE (NAT) (ZERO)) 'zero]
@@ -706,6 +719,8 @@
     [(THE (PI A B) f)
      (define x (closure-name B))
      (define y (freshen (map car Γ) x))
+     ;note that the (THE (val-of-closure B y-val) shouldn't be like super important for anything here,
+     ;since readbacknormm doesn't care about the n in the (U n) annotation
      (define y-val (NEU A (N-var y)))
      `(λ (,y)
         ,(read-back-norm (extend-ctx Γ y A)
@@ -731,6 +746,7 @@
          ,(read-back-norm Γ (THE A to)))]
     ;the issue here might be that A is a (UNI n) and D is a lower UNI by im assignning them both the high UNI, this is a
     ;variance rules thing
+    ;update: i dont think that readbacknorm cares about uni type
     [(THE (UNI n) (SIGMA A D))
      (define x (closure-name D))
      (define y (freshen (map car Γ) x))
@@ -743,7 +759,8 @@
      `(Π ((,y ,(read-back-norm Γ (THE (UNI n) A))))
          ,(read-back-norm (extend-ctx Γ y A)
                           (THE (UNI n) (val-of-closure B (NEU A (N-var y))))))]
-    [(THE (UNI (ADD1 n)) (UNI n)) '(U ,n)]
+    ;over here i dont think its required to enforce that k>n, that should maybe be done in another function??
+    [(THE (UNI k) (UNI n)) '(U ,n)]
     [(THE t1 (NEU t2 ne))
      (read-back-neutral Γ ne)]))
 
@@ -888,22 +905,30 @@
        (go `(the ,motive-out (ind-Absurd ,target-out ,motive-out))))]
     ['Atom (go '(the (U zero) Atom))]
     [`(,rator ,rand)
-     (go-on ([`(the ,rator-t ,rator-out) (synth Γ rator)])
+     (go-on ([`(the (,(or 'Π 'Pi) ((,k ,S)) ,M) ,rator-out) (synth Γ rator)]
+             ;thiss line 893 is a bit inneficient considering line 892
+             [`(the ,rator-t ,rator-out) (synth Γ rator)]
+             [`(the ,rator-t-t ,temp) (synth Γ rator-t)]
+             [`(U ,v) (U-check Γ rator-t-t)]
+             [`(the ,M-type M-temp) (synth (extend-ctx Γ k (val (ctx->env Γ) S)) M)]
+             [`(U ,g) (U-check Γ M-type)])
        (match (val (ctx->env Γ) rator-t)
          [(PI A B)
           (go-on ([rand-out (check Γ rand A)])
             (go `(the ,(read-back-norm Γ
-                                       (THE (UNI)
+                                       (THE (UNI (val (ctx->env Γ) g))
                                             (val-of-closure B
                                                             (val (ctx->env Γ)
                                                                  rand-out))))
                       (,rator-out ,rand-out))))]
          [non-PI (stop rator
                        (format "Expected a Π type, but this is a ~a"
-                               (read-back-norm Γ (THE (UNI) non-PI))))]))]
+                               (read-back-norm Γ (THE (UNI (val (ctx->env Γ) v)) non-PI))))]))]
+    ;i filled the following section in with UNI zeroes because it doesn't seem like the readbacknorm function actually cares about UNI level
     [x #:when (var? x)
-     (go-on ([t (lookup-type x Γ)])
-       (go `(the ,(read-back-norm Γ (THE (UNI) t)) ,x)))]
+     (go-on ([t (lookup-type x Γ)]
+             [`(the ,t-type ,temp) (synth Γ (read-back-norm Γ (THE (UNI (ZERO)) t)))])
+       (go `(the ,(read-back-norm Γ (THE (UNI (ZERO)) t)) ,x)))]
     [none-of-the-above (stop e "Can't synthesize a type")]))
 
 
@@ -927,6 +952,7 @@
     [`(U ,n) (go `(U ,n))]
     [non-U (stop expr (format "Expected (U n) got ~v" (read-back-norm Γ (val (ctx->env Γ) (synth Γ expr) non-U))))]))
 
+;once again read-back-norm doesn't seem to care about UNI type
 (define (check Γ e t)
   (match e
     [`(cons ,a ,d)
@@ -936,32 +962,32 @@
                 [d-out (check Γ d (val-of-closure D (val (ctx->env Γ) a-out)))])
           (go `(cons ,a-out ,d-out)))]
        [non-SIGMA (stop e (format "Expected Σ, got ~v"
-                                  (read-back-norm Γ (THE (UNI) non-SIGMA))))])]
+                                  (read-back-norm Γ (THE (UNI (ZERO)) non-SIGMA))))])]
     ['zero
      (match t
        [(NAT) (go 'zero)]
        [non-NAT (stop e (format "Expected Nat, got ~v"
-                                (read-back-norm Γ (THE (UNI) non-NAT))))])]
+                                (read-back-norm Γ (THE (UNI (ZERO)) non-NAT))))])]
     [`(add1 ,n)
      (match t
        [(NAT)
         (go-on ([n-out (check Γ n (NAT))])
           (go `(add1 ,n-out)))]
        [non-NAT (stop e (format "Expected Nat, got ~v"
-                                (read-back-norm Γ (THE (UNI) non-NAT))))])]
+                                (read-back-norm Γ (THE (UNI (ZERO)) non-NAT))))])]
     ['same
      (match t
        [(EQ A from to)
         (go-on ([_ (convert Γ A from to)])
           (go 'same))]
        [non-= (stop e (format "Expected =, got ~v"
-                              (read-back-norm Γ (THE (UNI) non-=))))])]
+                              (read-back-norm Γ (THE (UNI (ZERO)) non-=))))])]
     ['sole
      (match t
        [(TRIVIAL)
         (go 'sole)]
        [non-Trivial (stop e (format "Expected Trivial, got ~v"
-                                    (read-back-norm Γ (THE (UNI) non-Trivial))))])]
+                                    (read-back-norm Γ (THE (UNI (ZERO)) non-Trivial))))])]
     [`(,(or 'λ 'lambda) (,x) ,b)
      (match t
        [(PI A B)
@@ -969,13 +995,13 @@
         (go-on ([b-out (check (extend-ctx Γ x A) b (val-of-closure B x-val))])
           (go `(λ (,x) ,b-out)))]
        [non-PI (stop e (format "Expected Π, got ~v"
-                               (read-back-norm Γ (THE (UNI) non-PI))))])]
+                               (read-back-norm Γ (THE (UNI (ZERO)) non-PI))))])]
     [`',a
      (match t
        [(ATOM)
         (go `',a)]
        [non-ATOM (stop e (format "Expected Atom, got ~v"
-                                 (read-back-norm Γ (THE (UNI) non-ATOM))))])]
+                                 (read-back-norm Γ (THE (UNI (ZERO)) non-ATOM))))])]
     [none-of-the-above
      (go-on ([`(the ,t-out ,e-out) (synth Γ e)]
              [`(the ,t-of-t ,temp) (synth Γ t-out)]
