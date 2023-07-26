@@ -3,7 +3,7 @@
 ;imports for chapter 4 error handling, specifically go-on
 (require (for-syntax syntax/parse))
 (require (for-syntax racket/base syntax/parse))
-
+(require racket/trace)
 
 ; env : Env
 ; var : symbol?
@@ -400,6 +400,9 @@
 
 (define (α-equiv-aux e1 e2 xs1 xs2)
   (match* (e1 e2)
+    ;[(`(U (add1 ,n1)) `(U (add1 ,n2))) (α-equiv-aux `(U ,n1) `(U ,n2))]
+    ;[(`(U (add1 ,n1)) `(U ,n2)) (α-equiv-aux `(U ,n1) `(U ,n2))]
+    ;[(`(U (add1 ,n1)) `(U ,n2)) (α-equiv-aux `(U ,n1) `(U ,n2))]
     [(kw kw)
      #:when (keyword? kw)
      #t]
@@ -441,6 +444,12 @@
      (and (α-equiv-aux rator1 rator2 xs1 xs2)
           (α-equiv-aux rand1 rand2 xs1 xs2))]
     [(_ _) #f]))
+
+(define (greater-Nat-t A B)
+  (match* (A B)
+    [(`(add1 ,n ) `(add1 ,k ))  `(greater-Nat k n)]
+    [(`zero `(add1 ,k)) #f]
+    [(`(add1 ,k) zero) #t]))
 
 ; domain : value?
 ; range : closure?
@@ -760,7 +769,7 @@
          ,(read-back-norm (extend-ctx Γ y A)
                           (THE (UNI n) (val-of-closure B (NEU A (N-var y))))))]
     ;over here i dont think its required to enforce that k>n, that should maybe be done in another function??
-    [(THE (UNI k) (UNI n)) '(U ,n)]
+    [(THE (UNI k) (UNI n)) `(U ,(read-back-norm Γ (THE (NAT) n)))]
     [(THE t1 (NEU t2 ne))
      (read-back-neutral Γ ne)]))
 
@@ -839,7 +848,7 @@
     [`(ind-Nat ,target ,motive ,base ,step)
      (go-on ([target-out (check Γ target (NAT))]
              [`(the (,(or 'Π 'Pi) ((,x ,A)) ,B) ,mot) (synth Γ motive)]
-             [`(u ,n) (U-check B)]
+             [`(u ,n) (U-check Γ B)]
              [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'n (lambda (_) (UNI (val (ctx->env Γ) n))))))]
              [motive-val (go (val (ctx->env Γ) motive-out))]
              [base-out (check Γ base (do-ap motive-val (ZERO)))]
@@ -853,7 +862,7 @@
                  (ind-Nat ,target-out ,motive-out ,base-out ,step-out))))]
     [`(= ,A ,from ,to)
      (go-on ([`(the ,A-t ,A-temp) (synth Γ A)]
-             [`(U ,n) (U-check A-t)]
+             [`(U ,n) (U-check Γ A-t)]
              [A-out (check A-temp (UNI (val (ctx->env Γ) n) ))]
              [A-val (go (val (ctx->env Γ) A))]
              [from-out (check Γ from A-val)]
@@ -867,7 +876,7 @@
        (match (val (ctx->env Γ) target-t)
          [(EQ A from to)
           (go-on ([`(,(or 'Π 'Pi) ((,k ,S)) ,M) (synth Γ motive)]
-                  [`(U ,n) (U-check M)]
+                  [`(U ,n) (U-check Γ M)]
                   [motive-out
                    (check Γ
                           motive
@@ -899,7 +908,7 @@
     [`(ind-Absurd ,target ,motive)
      (go-on ([target-out (check Γ target (ABSURD))]
              [`(the ,A ,B) (synth Γ motive)]
-             [`(U ,n) (U-check A)]
+             [`(U ,n) (U-check Γ A)]
              ;this next line is probably redundant, try and remove some useless stuff
              [motive-out (check Γ motive (UNI (val (ctx->env Γ) n)))])
        (go `(the ,motive-out (ind-Absurd ,target-out ,motive-out))))]
@@ -937,6 +946,8 @@
     [(`(add1 ,n ) `(add1 ,k ))  `(add1 ,(greater-Nat k n))]
     [(`zero `(add1 ,k)) `(add1 ,k)]
     [(`(add1 ,k) zero) `(add1 ,k)]))
+
+
 
 
 
@@ -1005,7 +1016,8 @@
     [none-of-the-above
      (go-on ([`(the ,t-out ,e-out) (synth Γ e)]
              [`(the ,t-of-t ,temp) (synth Γ t-out)]
-             [`(U ,n) (U-check t-of-t)]
+             ;need to take the max of the two U_ns probably
+             [`(U ,n) (U-check Γ t-of-t)]
              [_ (convert Γ (UNI (val (ctx->env Γ) n)) t (val (ctx->env Γ) t-out))])
        (go e-out))]))
 
@@ -1045,6 +1057,7 @@
                                         (val ρ expr))))
            (go Γ))))]))
 
+
 (define (run-program Γ inputs)
   (match inputs
     ['() (go Γ)]
@@ -1052,5 +1065,15 @@
      (go-on ([new-Γ (interact Γ d)])
        (run-program new-Γ rest))]))
 
+;(trace run-program)
+;(trace interact)
+;(trace convert)
+;(trace U-check)
+;(trace synth)
+;(trace check)
+;(trace α-equiv?)
+(trace α-equiv-aux)
+;(trace read-back-norm)
+;(run-program `() `((the (U (add1 (add1 zero))) (U zero))))
 
 ;(the (Pi ((x Absurd)) (Pi ((y U_1)) U_1)) (lambda (x) (lambda (y) (ind-Absurd x y))))
