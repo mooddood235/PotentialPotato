@@ -451,7 +451,9 @@
     [else (equal? e m)]))
     
 (define (arbitrary? e)
-  (not (or (keyword? e) (list? e))))
+  (and
+   (not (or (keyword? e) (list? e)))
+    (string-prefix? (symbol->string e) "!")))
 
 (define (b-list? e)
   (and (list? e) (match e [`',s #f] [else #t])))
@@ -479,7 +481,7 @@
     [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
      (do-match ρ type-in type-out (val ρ expr) case0 case*)]
     ['U (UNI)]
-    [`(Π ((,x ,A)) ,B)
+    [`(,(or 'Π 'Pi) ((,x ,A)) ,B)
      (PI (val ρ A) (CLOS ρ x B))]
     [`(λ (,x) ,b)
      (LAM (CLOS ρ x b))]
@@ -759,6 +761,56 @@
      (match case0
        [`(,m ,r) (if (arbitrary? m) #t (match-is-total case*))])]))
 
+(define (get-recursive-calls name r)
+  (cond
+    [(b-list? r) (match r
+                   [`(,r0 ,r* ...) (cond
+                                     [(equal? name r0) `(,r)]
+                                     [(b-list? r0) (append (get-recursive-calls name r0)
+                                                           (get-recursive-calls name r*))]
+                                     [else (get-recursive-calls name r*)])]
+                   [`() `()])]
+    [`() `()]))
+
+(define (share-a-member L0 L1)
+  (match L0
+    [`(,e ,es ...) (cond
+                     [(member e L1) #t]
+                     [else (share-a-member es L1)])]
+    [`() #f]))
+
+(define (atleast-one-sub-expr arbs calls)
+  (match calls
+    [`(,e ,es ...) (and (share-a-member e arbs) (atleast-one-sub-expr arbs es))]
+    [`() #t]))
+
+(define (rec-check-cases name cases)
+  (match cases
+    [`() #t]
+    [`(,case0 ,case* ...)
+     [match case0
+       [`(,m ,r) (atleast-one-sub-expr (get-arbitraries m) (get-recursive-calls name r))]]]))
+     
+
+(define (rec-check Γ name e t)
+  (match e
+    [`(,(or 'λ 'lambda) (,x ,y ...) (match ,type-in ,type-out ,expr ,case0 ,case* ...))
+     (if (rec-check-cases name (cons case0 case*))
+         (go e)
+         (stop e "All recursive cases must have atleast one sub-expr as an argument"))]
+    [else (stop e "All recursive functions must be of the form (λ (x ...) (match ...))")]))
+                        
+
+
+(define (rec-synth Γ name e)
+  (match e
+    [`(the ,ty ,expr)
+     (let ([desugared-expr (desugar expr)]
+           [vald-ty (val (ctx->env Γ) ty)])
+       (go-on ([synth-out (synth (extend-ctx Γ name vald-ty) e)]
+               [expr-out (rec-check Γ name expr vald-ty)])
+              (go synth-out)))]))
+
 ; Γ : context?
 ; e : expr?
 
@@ -947,6 +999,9 @@
                        (read-back-norm Γ (THE (UNI) t))
                        e2))))
 
+
+
+
 ; Γ : context?
 ; input : (or/c (list/c 'define symbol? expression?) expression?)
 
@@ -956,6 +1011,13 @@
      (if (assv x Γ)
          (stop x "Already defined")
          (go-on ([`(the ,ty ,expr) (synth Γ (desugar e))])
+           (let ([ρ (ctx->env Γ)])
+             (go (cons (cons x (def (val ρ ty) (val ρ expr)))
+                       Γ)))))]
+    [`(rec-define ,x ,e)
+    (if (assv x Γ)
+         (stop x "Already defined")
+         (go-on ([`(the ,ty ,expr) (rec-synth Γ x e)])
            (let ([ρ (ctx->env Γ)])
              (go (cons (cons x (def (val ρ ty) (val ρ expr)))
                        Γ)))))]
