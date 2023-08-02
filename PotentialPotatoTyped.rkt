@@ -445,6 +445,55 @@
           (α-equiv-aux rand1 rand2 xs1 xs2))]
     [(_ _) #f]))
 
+
+(define (subtype? e1 e2)
+  (α-subtype-aux e1 e2 '() '()))
+
+;;;;;;;;;;;;;;;;;;;;;;SUBTYPER
+(define (α-subtype-aux e1 e2 xs1 xs2)
+  (match* (e1 e2)
+    [(`(U (add1 ,n1)) `(U (add1 ,n2))) (α-subtype-aux `(U ,n1) `(U ,n2) xs1 xs2)]
+    [(`(U ,n1) `(U (add1,n2))) (α-subtype-aux `(U ,n1) `(U ,n2) xs1 xs2)]
+    [(`(U (add1 ,n1)) `(U ,n2)) #f]
+    [(`(U ,n1) `(U ,n2)) (α-equiv-aux n1 n2 xs1 xs2)]
+    [(kw kw)
+     #:when (keyword? kw)
+     #t]
+    [(x y)
+     #:when (and (var? x) (var? y))
+     (match* ((assv x xs1) (assv y xs2))
+       [(#f #f) (eqv? x y)]
+       [((cons _ b1) (cons _ b2)) (eqv? b1 b2)]
+       [(_ _) #f])]
+    [(`(Π ((,x ,A1)) ,B1) `(Π ((,y ,A2)) ,B2))
+     (and (α-subtype-aux A1 A2 xs1 xs2)
+          (let ([fresh (gensym)])
+            (let ([bigger1 (cons (cons x fresh) xs1)]
+                  [bigger2 (cons (cons y fresh) xs2)])
+              (α-subtype-aux B1 B2 bigger1 bigger2))))]
+    [(`(Σ ((,x ,A1)) ,B1) `(Σ ((,y ,A2)) ,B2))
+     (and (α-subtype-aux A1 A2 xs1 xs2)
+          (let ([fresh (gensym)])
+            (let ([bigger1 (cons (cons x fresh) xs1)]
+                  [bigger2 (cons (cons y fresh) xs2)])
+              (α-subtype-aux B1 B2 bigger1 bigger2))))]
+    [(`',x  `',y)
+     (eqv? x y)]
+    ; This, together with read-back-norm, implements the η law for Absurd.
+    [(`(the Absurd ,e1) `(the Absurd ,e2))
+     #t]
+    [((cons op args1) (cons op args2))
+     #:when (keyword? op)
+     (and (= (length args1) (length args2))
+          (for/and ([arg1 (in-list args1)]
+                    [arg2 (in-list args2)])
+            (α-subtype-aux arg1 arg2 xs1 xs2)))]
+    [((list rator1 rand1) (list rator2 rand2))
+     (and (α-subtype-aux rator1 rator2 xs1 xs2)
+          (α-subtype-aux rand1 rand2 xs1 xs2))]
+    [(_ _) #f]))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (define (greater-Nat-t A B)
   (match* (A B)
     [(`(add1 ,n ) `(add1 ,k ))  `(greater-Nat k n)]
@@ -1017,18 +1066,35 @@
      (go-on ([`(the ,t-out ,e-out) (synth Γ e)]
              [`(the ,t-of-t ,temp) (synth Γ t-out)]
              ;need to take the max of the two U_ns probably
+             ;need to actually be checking if t-out is a *subtype* of t, not just alpha equivalent
+             ;alpha equivalence is what convert does by default
+             ;you should leave the alpha equivalence checker unchanged because some things do need to be precisely equal
+             ;such as x and y in a (= A x y)
              [`(U ,n) (U-check Γ t-of-t)]
-             [_ (convert Γ (UNI (val (ctx->env Γ) n)) t (val (ctx->env Γ) t-out))])
+             [`(the ,t-of-t2 ,temp2) (synth Γ (read-back-norm Γ (THE (UNI (ZERO)) t)))]
+             [`(U ,n2) (U-check Γ t-of-t2)]
+             [_ (subtype-convert Γ (UNI (val (ctx->env Γ) n)) (val (ctx->env Γ) t-out) t)])
        (go e-out))]))
 
 ; t : value?
 ; v1 : value?
 ; v2 : value?
 
+;once again recall that readbacknorm doesn't care about uni type
+;the onyl time v1 and v2 are not going to be types here is the (=...) statement
 (define (convert Γ t v1 v2)
   (define e1 (read-back-norm Γ (THE t v1)))
   (define e2 (read-back-norm Γ (THE t v2)))
   (if (α-equiv? e1 e2)
+      (go 'ok)
+      (stop e1 (format "Expected to be the same ~v as ~v"
+                       (read-back-norm Γ (THE (match t [(UNI n) (UNI (ADD1 n))]) t))
+                       e2))))
+
+(define (subtype-convert Γ t t1 t2)
+  (define e1 (read-back-norm Γ (THE t t1)))
+  (define e2 (read-back-norm Γ (THE t t2)))
+  (if (subtype? e1 e2)
       (go 'ok)
       (stop e1 (format "Expected to be the same ~v as ~v"
                        (read-back-norm Γ (THE (match t [(UNI n) (UNI (ADD1 n))]) t))
@@ -1065,15 +1131,18 @@
      (go-on ([new-Γ (interact Γ d)])
        (run-program new-Γ rest))]))
 
-;(trace run-program)
-;(trace interact)
-;(trace convert)
-;(trace U-check)
-;(trace synth)
-;(trace check)
-;(trace α-equiv?)
+(trace run-program)
+(trace interact)
+(trace convert)
+(trace U-check)
+(trace synth)
+(trace check)
+(trace α-equiv?)
 (trace α-equiv-aux)
-;(trace read-back-norm)
-;(run-program `() `((the (U (add1 (add1 zero))) (U zero))))
-
+(trace subtype?)
+(trace α-subtype-aux)
+(trace subtype-convert)
+(trace read-back-norm)
+(run-program `() `((the (U (add1 (add1 zero))) (U zero))))
+;
 ;(the (Pi ((x Absurd)) (Pi ((y U_1)) U_1)) (lambda (x) (lambda (y) (ind-Absurd x y))))
