@@ -514,7 +514,12 @@
     [`(,rator ,rand)
      (do-ap (val ρ rator) (val ρ rand))]
     [x #:when (var? x)
-     (cdr (assv x ρ))]))
+       (if (string-prefix? (symbol->string x) "rec-")
+           (match (cdr (assv x ρ))
+             [(LAM (CLOS p n b))
+              (LAM (CLOS (cons (assv x ρ) p) n b))])
+           (cdr (assv x ρ)))]))
+     
 
 ; v : value?
 (define (do-car v)
@@ -1025,19 +1030,13 @@
   (match input
     [`(define ,x ,e)
      (if (assv x Γ)
-         (stop x "Already defined")
-         (go-on ([`(the ,ty ,expr) (synth Γ (desugar e))])
+         (stop x "Already defined")        
+         (go-on ([`(the ,ty ,expr)
+                  (if (string-prefix? (symbol->string x) "rec-")
+                      (rec-synth Γ x (desugar e))
+                      (synth Γ (desugar e)))])
            (let ([ρ (ctx->env Γ)])
              (go (cons (cons x (def (val ρ ty) (val ρ expr)))
-                       Γ)))))]
-    [`(rec-define ,x ,e)
-    (if (assv x Γ)
-         (stop x "Already defined")
-         (go-on ([`(the ,ty ,expr) (rec-synth Γ x (desugar e))])
-           (let* ([ρ (ctx->env Γ)]
-                  [new-Γ (cons (cons x (def (val ρ ty) (val ρ expr))) Γ)]
-                  [new-ρ (ctx->env new-Γ)])
-             (go (cons (cons x (def (val new-ρ ty) (val new-ρ expr)))
                        Γ)))))]
     [e
      (go-on ([`(the ,ty ,expr) (synth Γ (desugar e))])
