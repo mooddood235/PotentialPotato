@@ -405,7 +405,7 @@
       (let* ([expr-norm (read-back-norm ρ (THE (val ρ type-in) expr))]
              [case-out (match-cases expr-norm case0 case*)]
              [r-out (replace-arbitraries expr-norm case-out)])
-        (val ρ r-out))))
+        (val ρ (desugar r-out)))))
 
 (define (replace-arbitraries expr case)
   (match case
@@ -727,7 +727,7 @@
       (let* ([a-to-f (arbitraries-to-fresh r-a Γ)]
              [extended-ctx (extend-ctx-arbitraries-to-fresh Γ m a-to-f type-in)]
              [r-out (replace-arbitraries-expr a-to-f r)])
-        (check extended-ctx r-out type-out))))
+        (check extended-ctx (desugar r-out) type-out))))
       
 (define (extend-ctx-arbitraries-to-fresh Γ m arbitraries-to-fresh type-in)
   (match arbitraries-to-fresh
