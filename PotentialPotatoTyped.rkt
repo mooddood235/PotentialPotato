@@ -1034,8 +1034,10 @@
     (if (assv x Γ)
          (stop x "Already defined")
          (go-on ([`(the ,ty ,expr) (rec-synth Γ x (desugar e))])
-           (let ([ρ (ctx->env Γ)])
-             (go (cons (cons x (def (val ρ ty) (val ρ expr)))
+           (let* ([ρ (ctx->env Γ)]
+                  [new-Γ (cons (cons x (def (val ρ ty) (val ρ expr))) Γ)]
+                  [new-ρ (ctx->env new-Γ)])
+             (go (cons (cons x (def (val new-ρ ty) (val new-ρ expr)))
                        Γ)))))]
     [e
      (go-on ([`(the ,ty ,expr) (synth Γ (desugar e))])
