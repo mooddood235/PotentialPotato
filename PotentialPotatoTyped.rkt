@@ -779,17 +779,27 @@
                      [else (share-a-member es L1)])]
     [`() #f]))
 
-(define (atleast-one-sub-expr arbs calls)
+(define (atleast-one-strict-sub-expr m call)
+  (match call
+    [`() #f]
+    [`(,e ,es ...)
+     (let ([e-s (format "~a" e)]
+           [m-s (format "~a" m)])
+     (or (and (string-contains? m-s e-s) (< (string-length e-s) (string-length m-s)))
+                       (atleast-one-strict-sub-expr m es)))]))
+
+(define (all-calls-strict-sub-expr m calls)
   (match calls
-    [`(,e ,es ...) (and (share-a-member e arbs) (atleast-one-sub-expr arbs es))]
-    [`() #t]))
+    [`() #t]
+    [`(,c0 ,c* ...) (and (atleast-one-strict-sub-expr m c0) (all-calls-strict-sub-expr m c*))]))
 
 (define (rec-check-cases name cases)
   (match cases
     [`() #t]
     [`(,case0 ,case* ...)
      [match case0
-       [`(,m ,r) (atleast-one-sub-expr (get-arbitraries m) (get-recursive-calls name r))]]]))
+       [`(,m ,r)
+        (and (all-calls-strict-sub-expr m (get-recursive-calls name r)) (rec-check-cases name case*))]]]))
      
 
 (define (rec-check Γ name e t)
