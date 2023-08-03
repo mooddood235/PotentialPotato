@@ -802,24 +802,30 @@
         (and (all-calls-strict-sub-expr m (get-recursive-calls name r)) (rec-check-cases name case*))]]]))
      
 
-(define (rec-check Γ name e t)
+(define (check-recursive-form e)
   (match e
-    [`(,(or 'λ 'lambda) (,x ,y ...) (match ,type-in ,type-out ,expr ,case0 ,case* ...))
-     (if (rec-check-cases name (cons case0 case*))
-         (go e)
-         (stop e "All recursive cases must have atleast one sub-expr as an argument"))]
-    [else (stop e "All recursive functions must be of the form (λ (x ...) (match ...))")]))
+    [`(,(or 'λ 'lambda) (,x) (match ,type-in ,type-out ,expr ,case0 ,case* ...))
+     (go (append `(match ,type-in ,type-out ,expr) (cons case0 case*)))]
+    [`(,(or 'λ 'lambda) (,x) ,b) (check-recursive-form b)]
+    [else
+     (stop e "Recursive functions must be of the form (λ (x y ...) (match ...))")]))
+
+(define (rec-check Γ name e t)
+  (go-on ([match-out (check-recursive-form e)])
+         (match match-out
+           [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
+             (if (rec-check-cases name (cons case0 case*))
+                 (go e)
+                 (stop e "All recursive cases must have atleast one sub-expr as an argument"))])))
                         
-
-
 (define (rec-synth Γ name e)
   (match e
     [`(the ,ty ,expr)
-     (let ([desugared-expr (desugar expr)]
-           [vald-ty (val (ctx->env Γ) ty)])
-       (go-on ([synth-out (synth (extend-ctx Γ name vald-ty) e)]
-               [expr-out (rec-check Γ name expr vald-ty)])
-              (go synth-out)))]))
+       (go-on ([synth-out (synth (extend-ctx Γ name (val (ctx->env Γ) ty)) e)]
+               [expr-out
+                (match synth-out
+                  [`(the ,ty-out ,expr-out) (rec-check Γ name expr-out (val (ctx->env Γ) ty-out))])])
+              (go synth-out))]))
 
 ; Γ : context?
 ; e : expr?
@@ -1027,7 +1033,7 @@
     [`(rec-define ,x ,e)
     (if (assv x Γ)
          (stop x "Already defined")
-         (go-on ([`(the ,ty ,expr) (rec-synth Γ x e)])
+         (go-on ([`(the ,ty ,expr) (rec-synth Γ x (desugar e))])
            (let ([ρ (ctx->env Γ)])
              (go (cons (cons x (def (val ρ ty) (val ρ expr)))
                        Γ)))))]
