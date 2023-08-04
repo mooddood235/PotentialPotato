@@ -1,4 +1,5 @@
 #lang racket
+ (require racket/trace)
 
 ;imports for chapter 4 error handling, specifically go-on
 (require (for-syntax syntax/parse))
@@ -185,7 +186,12 @@
         'Trivial 'sole
         'Absurd 'ind-Absurd
         'Atom 'quote
-        'the 'match))
+        'the
+        ;added List nil and double colon
+        'List
+        '::
+        'nil
+        'ind-List 'match))
 
 (define a-matchables
   (list 'zero 'Nat 'Atom))
@@ -295,6 +301,11 @@
 
 (struct UNI () #:transparent)
 
+;LIST: adding structs nil, concat:: and List
+(struct LIST (entry-type) #:transparent)
+(struct NIL () #:transparent)
+(struct CONCAT:: (head tail) #:transparent)
+
 ; type : value?
 ; neutral : neutral?
 (struct NEU (type neutral) #:transparent)
@@ -331,6 +342,9 @@
 ; base : normal?
 ; step : normal?
 (struct N-ind-Nat (target motive base step) #:transparent)
+
+;making a struct for ind-List
+(struct N-ind-List (target motive base step) #:transparent)
 
 ; x : (or expr? neutral?)
 ; y : (or expr? neutral?)
@@ -489,6 +503,12 @@
      (SIGMA (val ρ A) (CLOS ρ x D))]
     [`(cons ,a ,d)
      (PAIR (val ρ a) (val ρ d))]
+    ;added List expression
+    [`(List ,E) (LIST (val ρ E))]
+    ;added :: expression, not super sure if the pattern is correct
+    [`(:: ,head ,tail) (CONCAT:: (val ρ head) (val ρ tail))]
+    ;added NIL expression
+    ['nil (NIL)]
     [`(car ,pr)
      (do-car (val ρ pr))]
     [`(cdr ,pr)
@@ -499,6 +519,9 @@
     [`(+ ,x ,y) (do-+ (val ρ x) (val ρ y))]
     [`(ind-Nat ,target ,motive ,base ,step)
      (do-ind-Nat (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
+    ;evaluating a ind-List expression
+    [`(ind-List ,target ,motive ,base, step)
+     (do-ind-List (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
     [`(= ,A ,from ,to)
      (EQ (val ρ A) (val ρ from) (val ρ to))]
     ['same
@@ -616,6 +639,34 @@
                       (H-O-CLOS 'ih
                                 (lambda (ih)
                                   (do-ap motive (ADD1 n-1)))))))))
+;writing the code which actually returns the value of the ind-List
+;expression provided the values of the arguments
+(define (do-ind-List target motive base step)
+  (match target
+    [(NIL) base]
+    [(CONCAT:: hed res) (do-ap (do-ap (do-ap step hed) res) (do-ind-List res motive base step))]
+    [(NEU (LIST E) ne)
+     (NEU (do-ap motive target)
+          (N-ind-List
+           ne
+           (THE (PI (LIST E)
+                    (H-O-CLOS 'k (lambda (k) (UNI))))
+                motive)
+           (THE (do-ap motive (NIL)) base)
+           (THE (ind-List-step-type motive E)
+                step)))]))
+(define (ind-List-step-type motive E)
+  ;removed brackets from around E on line 735
+  (PI E
+      (H-O-CLOS 'hed
+                (lambda (hed)
+                  (PI (LIST E)
+                      (H-O-CLOS 'tal
+                                (lambda (tal)
+                                  (PI (do-ap motive tal)
+                                      (H-O-CLOS 'ih
+                                                (lambda (ih)
+                                                  (do-ap motive (CONCAT:: hed tal))))))))))))
 ; Γ : context?
 ; norm : norm?
 
@@ -624,7 +675,10 @@
     [(THE (NAT) (ZERO)) 'zero]
     [(THE (NAT) (ADD1 n))
      `(add1 ,(read-back-norm Γ (THE (NAT) n)))]
-   
+    ;adding readback for nil
+    [(THE (LIST E) (NIL)) 'nil]
+    ;adding readback for ::
+    [(THE (LIST E) (CONCAT:: hed tal)) `(:: ,(read-back-norm Γ (THE E hed)) ,(read-back-norm Γ (THE (LIST E) tal)))]
     [(THE (PI A B) f)
      (define x (closure-name B))
      (define y (freshen (map car Γ) x))
@@ -644,6 +698,8 @@
     [(THE (EQ A from to) (SAME)) 'same]
     [(THE (ATOM) (QUOTE x)) `',x]
     [(THE (UNI) (NAT)) 'Nat]
+    ;adding readback for the actual type name List E
+    [(THE (UNI) (LIST E)) `(List ,(read-back-norm Γ (THE (UNI) E)))]
     [(THE (UNI) (ATOM)) 'Atom]
     [(THE (UNI) (TRIVIAL)) 'Trivial]
     [(THE (UNI) (ABSURD)) 'Absurd]
@@ -680,6 +736,12 @@
     [(N-cdr ne) `(cdr ,(read-back-neutral Γ ne))]
     [(N-ind-Nat ne motive base step)
      `(ind-Nat ,(read-back-neutral Γ ne)
+               ,(read-back-norm Γ motive)
+               ,(read-back-norm Γ base)
+               ,(read-back-norm Γ step))]
+    ;added the readback for a ind-List expression
+    [(N-ind-List ne motive base step)
+     `(ind-List ,(read-back-neutral Γ ne)
                ,(read-back-norm Γ motive)
                ,(read-back-norm Γ base)
                ,(read-back-norm Γ step))]
@@ -881,6 +943,9 @@
           (stop e (format "Expected Σ, got ~v"
                           (read-back-norm Γ (THE (UNI) non-SIGMA))))]))]
     ['Nat (go '(the U Nat))]
+    ;Adding synthesizing for List
+    [`(List ,E)
+     (go-on ([Ek (check Γ E (UNI))]) (go `(the U (List ,Ek))))]
     [`(ind-Nat ,target ,motive ,base ,step)
      (go-on ([target-out (check Γ target (NAT))]
              [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'n (lambda (_) (UNI)))))]
@@ -894,6 +959,24 @@
                    (THE (UNI)
                         (do-ap motive-val (val (ctx->env Γ) target-out))))
                  (ind-Nat ,target-out ,motive-out ,base-out ,step-out))))]
+    ;adding synthesizing for ind-List
+    ;note that it needs to be figured out what the type of the list entries are, for now theres the
+    ;assumption that the target has the form `(the A B)
+    [`(ind-List ,target ,motive ,base ,step)
+     (go-on ([`(the ,target-t-t ,target-out-t) (synth Γ target)]
+             [entry-t (go (match (val (ctx->env Γ) target-t-t) [(LIST E) E]))]
+             [target-out (go target-out-t)]
+             [motive-out (check Γ motive (PI (LIST entry-t) (H-O-CLOS 'n (lambda (_) (UNI)))))]
+             [motive-val (go (val (ctx->env Γ) motive-out))]
+             [base-out (check Γ base (do-ap motive-val (NIL)))]
+             [step-out (check Γ
+                              step
+                              (ind-List-step-type motive-val entry-t))])
+            (go `(the ,(read-back-norm
+                   Γ
+                   (THE (UNI)
+                        (do-ap motive-val (val (ctx->env Γ) target-out))))
+                 (ind-List ,target-out ,motive-out ,base-out ,step-out))))]
     [`(= ,A ,from ,to)
      (go-on ([A-out (check Γ A (UNI))]
              [A-val (go (val (ctx->env Γ) A-out))]
@@ -971,6 +1054,20 @@
           (go `(add1 ,n-out)))]
        [non-NAT (stop e (format "Expected Nat, got ~v"
                                 (read-back-norm Γ (THE (UNI) non-NAT))))])]
+    ;adding checking for nil and ::, but the output message is weird, need to fix the (List E) part
+    ['nil
+     (match t
+       [(LIST E) (go 'nil)]
+       [non-LIST (stop e (format "Expected (List E), got ~v"
+                                (read-back-norm Γ (THE (UNI) non-LIST))))])]
+    [`(:: ,hed ,tal)
+     (match t
+       [(LIST E)
+        (go-on ([h-out (check Γ hed E)]
+                [t-out (check Γ tal (LIST E))])
+          (go `(:: ,h-out ,t-out)))]
+       [non-LIST (stop e (format "Expected (List E), got ~v"
+                                  (read-back-norm Γ (THE (UNI) non-LIST))))])]
     [`(+ ,x ,y)
      (match t
        [(NAT)
@@ -978,7 +1075,6 @@
                (go `(+ ,x-out ,y-out)))]
        [non-NAT (stop e (format "Expected Nat, got ~v"
                                 (read-back-norm Γ (THE (UNI) non-NAT))))])]
-    
     ['same
      (match t
        [(EQ A from to)
@@ -1053,6 +1149,7 @@
                                         (val ρ expr))))
            (go Γ))))]))
 
+
 (define (run-program Γ inputs)
   (match inputs
     ['() (go Γ)]
@@ -1091,21 +1188,3 @@
     [rand0 (desugar rand0)]))
 
 ; -----------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
