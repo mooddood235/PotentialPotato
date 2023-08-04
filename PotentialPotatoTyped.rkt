@@ -784,19 +784,22 @@
                      [else (share-a-member es L1)])]
     [`() #f]))
 
-(define (atleast-one-strict-sub-expr m call)
+(define (last-arg-strict-sub-expr m call)
   (match call
     [`() #f]
     [`(,e ,es ...)
      (let ([e-s (format "~a" e)]
            [m-s (format "~a" m)])
-     (or (and (string-contains? m-s e-s) (< (string-length e-s) (string-length m-s)))
-                       (atleast-one-strict-sub-expr m es)))]))
+       (cond
+         [(empty? es) (and (and (string-contains? m-s e-s) (string-contains? e-s "!"))
+                                (< (string-length e-s) (string-length m-s)))]
+         [else (last-arg-strict-sub-expr m es)]))]))
 
-(define (all-calls-strict-sub-expr m calls)
+(define (all-calls-last-arg-strict-sub-expr m calls)
   (match calls
     [`() #t]
-    [`(,c0 ,c* ...) (and (atleast-one-strict-sub-expr m c0) (all-calls-strict-sub-expr m c*))]))
+    [`(,c0 ,c* ...) (and (last-arg-strict-sub-expr m c0)
+                         (all-calls-last-arg-strict-sub-expr m c*))]))
 
 (define (rec-check-cases name cases)
   (match cases
@@ -804,16 +807,17 @@
     [`(,case0 ,case* ...)
      [match case0
        [`(,m ,r)
-        (and (all-calls-strict-sub-expr m (get-recursive-calls name r)) (rec-check-cases name case*))]]]))
+        (and (all-calls-last-arg-strict-sub-expr m (get-recursive-calls name r))
+             (rec-check-cases name case*))]]]))
      
 
 (define (check-recursive-form e)
   (match e
-    [`(,(or 'λ 'lambda) (,x) (match ,type-in ,type-out ,expr ,case0 ,case* ...))
+    [`(,(or 'λ 'lambda) (,expr) (match ,type-in ,type-out ,expr ,case0 ,case* ...))
      (go (append `(match ,type-in ,type-out ,expr) (cons case0 case*)))]
     [`(,(or 'λ 'lambda) (,x) ,b) (check-recursive-form b)]
     [else
-     (stop e "Recursive functions must be of the form (λ (x y ...) (match ...))")]))
+     (stop e "Recursive functions must be of the form (λ (x y ... z) (match A B z ...))")]))
 
 (define (rec-check Γ name e t)
   (go-on ([match-out (check-recursive-form e)])
@@ -821,7 +825,7 @@
            [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
              (if (rec-check-cases name (cons case0 case*))
                  (go e)
-                 (stop e "All recursive cases must have atleast one sub-expr as an argument"))])))
+                 (stop e "The last argument of a recursive case must be a strict sub expression of the match pattern."))])))
                         
 (define (rec-synth Γ name e)
   (match e
