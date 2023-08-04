@@ -200,7 +200,7 @@
         'match))
 
 (define a-matchables
-  (list 'zero 'Nat 'Atom))
+  (list 'zero 'Nat 'Atom 'List 'Vec 'nil 'vecnil))
 
 ; x : keyword?
 (define (keyword? x)
@@ -879,6 +879,10 @@
 (define (get-type-a m a type-in)
   (match m
     [`(add1 ,n) (NAT)]
+    [`(:: ,e ,es) (cond
+                    [(equal? a es) type-in]
+                    [else (match type-in
+                            [(LIST entry-type) entry-type])])]
     [n type-in]))
 
 (define (arbitraries-to-fresh arbitraries Γ)
