@@ -883,6 +883,13 @@
                     [(equal? a es) type-in]
                     [else (match type-in
                             [(LIST entry-type) entry-type])])]
+    [`(vec:: ,e ,es) (match type-in
+                       [(VEC entry-type len)
+                        (cond
+                          [(equal? a es) (VEC entry-type (match len
+                                                           [(ADD1 n) n]
+                                                           [n n]))]
+                          [else entry-type])])]
     [n type-in]))
 
 (define (arbitraries-to-fresh arbitraries Γ)
