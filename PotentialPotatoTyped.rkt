@@ -853,7 +853,7 @@
   (match e
     [`(the ,type ,expr)
      (go-on ([`(the ,typeoftype ,ty) (synth Γ type)]
-             [`(U, n) (U-check Γ typeoftype)]
+             [`(U ,n) (U-check Γ typeoftype)]
              ;this next line might be useless, why not just use typeoftype?
              [t-out (check Γ type (UNI (val (ctx->env Γ) n)))]
              [e-out (check Γ expr (val (ctx->env Γ) t-out))])
@@ -861,15 +861,18 @@
     [`(U ,n)
      (go `(the (U (add1 ,n)) (U ,n)))]
     [`(,(or 'Σ 'Sigma) ((,x ,A)) ,D)
-     (go-on ([`(the ,A-type A-temp) (synth Γ A)]
+     (go-on ([`(the ,A-type ,A-temp) (synth Γ A)]
              [`(U ,n) (U-check Γ A-type)]
              [A-out (check Γ A (UNI (val (ctx->env Γ) n)))]
              
-             [`(the ,D-type D-temp) (synth (extend-ctx Γ x (val (ctx->env Γ) A-out)) D)]
+             [`(the ,D-type ,D-temp) (synth (extend-ctx Γ x (val (ctx->env Γ) A-out)) D)]
              [`(U ,k) (U-check Γ D-type)]
-             [D-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) D (UNI (check Γ A (UNI (val (ctx->env Γ) n)))))])
+             ;some of these parts were commented out in a similar way to Pi
+             ;[D-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) D (UNI (check Γ A (UNI (val (ctx->env Γ) n)))))]
+             )
             
-       (go `(the (U ,(greater-Nat (cdr (cdr A-out)) (cdr (cdr D-out)))) (Σ ((,x ,(car A-out))) ,(car D-out)))))]
+       ;(go `(the (U ,(greater-Nat (cdr (cdr A-out)) (cdr (cdr D-out)))) (Σ ((,x ,(car A-out))) ,(car D-out)))))]
+        (go `(the (U ,(greater-Nat n k)) (Σ ((,x ,A-temp)) ,D-temp))))]
     [`(car ,pr)
      (go-on ([`(the ,pr-ty ,pr-out) (synth Γ pr)]
              [`(the ,pr-ty-ty ,stuff) (synth Γ pr-ty)])
@@ -939,15 +942,18 @@
     ;need to take the max of the types U, Uof(A) and Uof(B)
     [`(,(or 'Π 'Pi) ((,x ,A)) ,B)
      
-     (go-on ([`(the ,A-type A-temp) (synth Γ A)]
+     (go-on ([`(the ,A-type ,A-temp) (synth Γ A)]
              [`(U ,n) (U-check Γ A-type)]
              [A-out (check Γ A (UNI (val (ctx->env Γ) n)))]
              
-             [`(the ,B-type B-temp) (synth (extend-ctx Γ x (val (ctx->env Γ) A-out)) B)]
+             [`(the ,B-type ,B-temp) (synth (extend-ctx Γ x (val (ctx->env Γ) A-out)) B)]
              [`(U ,k) (U-check Γ B-type)]
-             [B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI (check Γ A (UNI (val (ctx->env Γ) n)))))])
+             ;this next line is incorrect, checking if B is the same type level as A doesn't make sense
+             ;[B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI (check Γ A (UNI (val (ctx->env Γ) n)))))]
+             )
             
-       (go `(the (U ,(greater-Nat (cdr (cdr A-out)) (cdr (cdr B-out)))) (Π ((,x ,(car A-out))) ,(car B-out)))))]
+       ;(go `(the (U ,(greater-Nat (cdr (cdr A-out)) (cdr (cdr B-out)))) (Π ((,x ,(car A-out))) ,(car B-out)))))]
+    (go `(the (U ,(greater-Nat n k)) (Π ((,x ,A-temp)) ,B-temp))))]
 
      ;(go-on ([A-out (check Γ A (UNI (ZERO)) #t)]
      ;        [B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI (ZERO)) #t)])
@@ -968,7 +974,7 @@
              [`(the ,rator-t ,rator-out) (synth Γ rator)]
              [`(the ,rator-t-t ,temp) (synth Γ rator-t)]
              [`(U ,v) (U-check Γ rator-t-t)]
-             [`(the ,M-type M-temp) (synth (extend-ctx Γ k (val (ctx->env Γ) S)) M)]
+             [`(the ,M-type ,M-temp) (synth (extend-ctx Γ k (val (ctx->env Γ) S)) M)]
              [`(U ,g) (U-check Γ M-type)])
        (match (val (ctx->env Γ) rator-t)
          [(PI A B)
@@ -994,7 +1000,8 @@
   (match* (A B)
     [(`(add1 ,n ) `(add1 ,k ))  `(add1 ,(greater-Nat k n))]
     [(`zero `(add1 ,k)) `(add1 ,k)]
-    [(`(add1 ,k) zero) `(add1 ,k)]))
+    [(`(add1 ,k) zero) `(add1 ,k)]
+    [(`zero `zero) `zero]))
 
 
 
@@ -1131,8 +1138,8 @@
      (go-on ([new-Γ (interact Γ d)])
        (run-program new-Γ rest))]))
 
-(trace run-program)
-(trace interact)
+;(trace run-program)
+;(trace interact)
 (trace convert)
 (trace U-check)
 (trace synth)
@@ -1141,8 +1148,22 @@
 (trace α-equiv-aux)
 (trace subtype?)
 (trace α-subtype-aux)
+(trace val)
 (trace subtype-convert)
 (trace read-back-norm)
-(run-program `() `((the (U (add1 (add1 zero))) (U zero))))
-;
-;(the (Pi ((x Absurd)) (Pi ((y U_1)) U_1)) (lambda (x) (lambda (y) (ind-Absurd x y))))
+;(run-program `() `((the (U (add1 (add1 zero))) (U zero))))
+;(run-program `() `((the (U (add1 (add1 zero))) (U (add1 zero)))))
+;(run-program `() `((the (Pi ((x Absurd)) (Pi ((y (U (add1 zero)))) y)) (lambda (x) (lambda (y) (ind-Absurd x y))))))
+;(run-program `() `((define fn (the (Pi ((x Nat)) (Pi ((y (U (add1 zero)))) y)) (lambda (x) (lambda (y) Nat)))))) example of whats not allowed
+
+;important notes:
+;You can't write a proof for types like (Pi ((y (U (add1 zero)))) y), since y could be a (U zero), meaning that every statement can be proven
+
+;(run-program `() `((the (Pi ((n (U (add1 (add1 zero))))) (U (add1 zero))) (lambda (x) Nat))))
+
+;(run-program `() `((the (Sigma ((n (U (add1 (add1 zero))))) (U (add1 zero))) (cons (U zero) (U zero)))))
+(run-program `() `((the (Pi ((n Nat)) (U (add1 n))) (lambda (x) (U x)))))
+
+
+;(run-program `() `(the (U zero) (ind-Nat (the Nat (add1 zero))  (the (Pi ((n Nat)) (U (add1 n))) (lambda (x) (U x)))
+
