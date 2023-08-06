@@ -1,4 +1,5 @@
 #lang racket
+ (require racket/trace)
 
 ;imports for chapter 4 error handling, specifically go-on
 (require (for-syntax syntax/parse))
@@ -16,50 +17,6 @@
 (define (extend p x v)
   (cons (cons x v) p))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-; ρ : environment?
-; e : expression?
-;(define (val ρ e)
- ; (match e
-  ;  [`(λ (,x) ,b)
-   ;  (CLOS ρ x b)]
-    ;[x #:when (symbol? x)
-     ;(let ((xv (assv x ρ)))
-      ; (if xv
-       ;    (cdr xv)
-        ;   (error 'val "Unknown variable ~a" x)))]
-;    [`(,rator ,rand)
- ;    (do-ap (val ρ rator) (val ρ rand))]))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-; fun : value?
-; arg : value?
-;(define (do-ap fun arg)
- ; (match fun
-  ;  [(CLOS ρ x b)
-  ;   (val (extend ρ x arg) b)]
-    ; If the argument is neutral, construct a bigger neutral expression.
-   ; [neutral-fun
-    ; (N-ap fun arg)]))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; ρ : (listof (pair symbol? value?))
-; exprs : (listof expression?)
-;(define (run-program ρ exprs)
- ; (match exprs
-;    [(list) (void)]
-;    [(list `(define ,x ,e) rest ...)
-;     (let ([v (val ρ e)])
-;       (run-program (extend ρ x v) rest))]
-;    [(list e rest ...)
-;     (displayln (norm ρ e))
-;     (run-program ρ rest)]))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 ; x : symbol?
 (define (add-* x)
   (string->symbol
@@ -73,22 +30,6 @@
   (if (memv x used)
       (freshen used (add-* x))
       x))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; used-names : (listof symbol?)
-; v : value?
-;(define (read-back used-names v)
-;  (match v
-;    [(CLOS ρ x body)
-;     (let* ((y (freshen used-names x))
-;            (neutral-y (N-var y)))
-;       `(λ (,y)
-;          ,(read-back (cons y used-names)
-;                      (val (extend ρ x neutral-y) body))))]
-;    [(N-var x) x]
-;    [(N-ap rator rand)
-;     `(,(read-back used-names rator) ,(read-back used-names rand))]))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (norm ρ e)
   (read-back '() (val ρ e)))
@@ -155,71 +96,6 @@
   (type=? t t))
 
 ; Γ : context?
-; e : expression?
-;(define (synth Γ e)
-;  (match e
-;    ; Type annotations
-;    [`(the ,t ,e2)
-;     (if (not (type? t))
-;         (stop e (format "Invalid type ~a" t))
-;         (go-on ([_ (check Γ e2 t)])
-;           (go t)))]
-;    ; Recursion on Nat
-;    [`(rec ,type ,target ,base ,step)
-;     (go-on ([target-t (synth Γ target)]
-;             [_ (if (type=? target-t 'Nat)
-;                    (go 'ok)
-;                    (stop target (format "Expected Nat, got ~v"
-;                                         target-t)))]
-;             [_ (check Γ base type)]
-;             [_ (check Γ step `(→ Nat (→ ,type ,type)))])
-;       (go type))]
-;    [x #:when (and (symbol? x)
-;                   (not (memv x '(the rec λ zero add1))))
-;     (match (assv x Γ)
-;       [#f (stop x "Variable not found")]
-;       [(cons _ t) (go t)])]
-;    [`(,rator ,rand)
-;     (go-on ([rator-t (synth Γ rator)])
-;       (match rator-t
-;         [`(→ ,A ,B)
-;          (go-on ([_ (check Γ rand A)])
-;            (go B))]
-;         [else (stop rator (format "Not a function type: ~v"
-;                                   rator-t))]))]))
-
-; Γ : context?
-; e : expression?
-; t : type?
-
-;(define (check Γ e t)
-;  (match e
-;    ['zero
-;     (if (type=? t 'Nat)
-;         (go 'ok)
-;         (stop e (format "Tried to use ~v for zero" t)))]
-;    [`(add1 ,n)
-;     (if (type=? t 'Nat)
-;         (go-on ([_ (check Γ n 'Nat)])
-;           (go 'ok))
-;         (stop e (format "Tried to use ~v for add1" t)))]
-;    [`(λ (,x) ,b)
-;     (match t
-;       [`(→ ,A ,B)
-;        (go-on ([_ (check (extend Γ x A) b B)])
-;          (go 'ok))]
-;       [non-arrow
-;        (stop e (format "Instead of → type, got ~a" non-arrow))])]
-;    [other
-;     (go-on ([t2 (synth Γ e)])
-;       (if (type=? t t2)
-;           (go 'ok)
-;           (stop e
-;                 (format "Synthesized type ~v where type ~v was expected"
-;                         t2
-;                         t))))]))
-
-; Γ : context?
 ; prog : (listof (or/c expression? (list/c 'define symbol? expression?)))
 (define (check-program Γ prog)
   (match prog
@@ -250,34 +126,6 @@
 
 ; v : any/c
 (define (norm? v) (THE? v))
-
-; p : environment
-; e : expression
-;(define (val ρ e)
-;  (match e
-;    [`(the ,type ,expr)
-;     (val ρ expr)]
-;    ['zero (ZERO)]
-;    [`(add1 ,n) (ADD1 (val ρ n))]
-;    [x #:when (and (symbol? x)
-;                   (not (memv x '(the zero add1 λ rec))))
-;     (cdr (assv x ρ))]
-;    [`(λ (,x) ,b)
-;     (CLOS ρ x b)]
-;    [`(rec ,type ,target ,base ,step)
-;     (do-rec type (val ρ target) (val ρ base) (val ρ step))]
-;    [`(,rator ,rand)
-;     (do-ap (val ρ rator) (val ρ rand))]))
-
-
-; fun : value
-; arg : value
-;(define (do-ap fun arg)
-;  (match fun
-;    [(CLOS ρ x e)
-;     (val (extend ρ x arg) e)]
-;    [(NEU `(→ ,A ,B) ne)
-;     (NEU B (N-ap ne (THE A arg)))]))
 
 ; type : type?
 ; target : value?
@@ -314,21 +162,6 @@
                       B
                       (do-ap value (NEU A (N-var x))))))]))
 
-; used-names : (listof symbol?)
-; ne : neutral?
-;(define (read-back-neutral used-names ne)
-;  (match ne
-;    [(N-var x) x]
-;    [(N-ap fun (THE arg-type arg))
-;     `(,(read-back-neutral used-names fun)
-;       ,(read-back used-names arg-type arg))]
-;    [(N-rec type target (THE base-type base) (THE step-type step))
-;     `(rec ,type
-;        ,(read-back-neutral used-names target)
-;        ,(read-back used-names base-type base)
-;        ,(read-back used-names step-type step))]))
-
-
 ; Δ : definitions?
 (define (defs->ctx Δ)
   (match Δ
@@ -343,45 +176,43 @@
     [(cons (cons x (def _ value)) rest)
      (extend (defs->env rest) x value)]))
 
-; Δ : definitions?
-; prog : (listof (or/c (list 'define symbol? expression?)
-;              expression?))
-
-;(define (run-program Δ prog)
-;  (match prog
-;    ['() (go Δ)]
-;    [(cons `(define ,x ,e) rest)
-;     (go-on ([type (synth (defs->ctx Δ) e)])
-;       (run-program (extend Δ x (def type (val (defs->env Δ) e)))
-;                    rest))]
-;    [(cons e rest)
-;     (let ([Γ (defs->ctx Δ)]
-;           [ρ (defs->env Δ)])
-;       (go-on ([type (synth Γ e)])
-;         (let ([v (val ρ e)])
-;           (begin
-;             (printf "(the ~a\n  ~a)\n"
-;                     type
-;                     (read-back (map car Γ) type v))
-;             (run-program Δ rest)))))]))
-
 (define keywords
   (list 'define
         'U
-        'Nat 'zero 'add1 'ind-Nat
+        'Nat 'zero 'add1 '+ 'ind-Nat
         'Σ 'Sigma 'cons 'car 'cdr
         'Π 'Pi 'λ 'lambda
         '= 'same 'replace
         'Trivial 'sole
         'Absurd 'ind-Absurd
         'Atom 'quote
-        'the))
+        'the
+        ;added List nil and double colon
+        'List
+        '::
+        'nil
+        ;adding vector vecnil and vec::
+        'Vec
+        'vecnil
+        'vec::
+        'ind-Vec
+        'ind-List 
+        'match))
+
+(define a-matchables
+  (list 'zero 'Nat 'Atom))
 
 ; x : keyword?
 (define (keyword? x)
   (if (memv x keywords)
       #t
       #f))
+
+(define (a-matchable? x)
+  (if (or (or (memv x a-matchables) (list? x)) (arbitrary? x))
+      #t
+      #f))
+  
 
 ; x : any/c
 (define (var? x)
@@ -534,6 +365,11 @@
 
 (struct UNI (level) #:transparent)
 
+;VECTOR: adding struct vecnil vcat:: and VEC
+(struct VEC (entry-type len) #:transparent)
+(struct VECNIL () #:transparent)
+(struct VCAT:: (head tail) #:transparent)
+
 ; type : value?
 ; neutral : neutral?
 (struct NEU (type neutral) #:transparent)
@@ -571,6 +407,18 @@
 ; step : normal?
 (struct N-ind-Nat (target motive base step) #:transparent)
 
+;making a struct for ind-List
+(struct N-ind-List (target motive base step) #:transparent)
+
+
+;making a struct for ind-Vec
+(struct N-ind-Vec (n target motive base step) #:transparent)
+
+; x : (or expr? neutral?)
+; y : (or expr? neutral?)
+(struct N-+ (x y) #:transparent)
+
+
 ; target : neutral?
 ; motive : normal?
 ; base : normal?
@@ -579,6 +427,8 @@
 ; target : neutral?
 ; motive : normal?
 (struct N-ind-Absurd (target motive) #:transparent)
+
+(struct N-match (type-in type-out expr case0 case*) #:transparent)
 
 ; type : value?
 ; val : value?
@@ -632,14 +482,90 @@
     [(CLOS ρ x e) (val (extend ρ x v) e)]
     [(H-O-CLOS x f) (f v)]))
 
+(define (do-match ρ type-in type-out expr case0 case*)
+  (if (NEU? expr)
+      (NEU (val ρ type-out) (N-match type-in type-out (match expr [(NEU X ne) ne]) case0 case*))
+      (let* ([expr-norm (read-back-norm ρ (THE (val ρ type-in) expr))]
+             [case-out (match-cases expr-norm case0 case*)]
+             [r-out (replace-arbitraries expr-norm case-out)])
+        (val ρ (desugar r-out)))))
+
+(define (replace-arbitraries expr case)
+  (match case
+    [`(,m ,r) (replace-arbitraries-expr (arbitrary-to-expr expr m) r)]))
+
+
+(define (replace-arbitraries-expr a-to-e r)
+  (cond
+    [(arbitrary? r) (match (cdr (assv r a-to-e)) [`(,e) e])]
+    [(b-list? r) (replace-arbitraries-list a-to-e r)]
+    [else r]))
+
+(define (replace-arbitraries-list a-to-e r)
+  (match r
+    [`(,r0 ,rs ...)
+     (append (list (replace-arbitraries-expr a-to-e r0)) (replace-arbitraries-list a-to-e rs))]
+    [`() `()]))
+
+(define (arbitrary-to-expr expr m)
+  (cond
+    [(arbitrary? m) `(,(list m expr))]
+    [(b-list? m) (list-arbitrary-to-expr expr m)]
+    [else `()]))
+
+(define (list-arbitrary-to-expr expr m)
+  (match m
+    [`(,m0 ,m* ...)
+     (match expr [`(,e0 ,e* ...)
+                  (append (arbitrary-to-expr e0 m0) (list-arbitrary-to-expr e* m*))])]
+    [`() `()]))
+
+(define (match-cases expr case0 case*)
+   (match case0
+    [`(,m ,r)
+     (if (match-exprs expr m) case0 (match case*
+                                   [`() #f]
+                                   [`(,case1 ,case** ...) (match-cases expr case1 case**)]))]))
+
+(define (match-exprs e m)
+  (cond
+    [(and (b-list? e) (b-list? m)) (match-lists e m)]
+    [(and (a-matchable? e) (arbitrary? m)) #t]
+    [else (equal? e m)]))
+    
+(define (arbitrary? e)
+  (and
+   (not (or (keyword? e) (list? e)))
+    (string-prefix? (symbol->string e) "!")))
+
+(define (b-list? e)
+  (and (list? e) (match e [`',s #f] [else #t])))
+
+(define (match-lists L0 L1)
+  (if (not (= (list-length L0) (list-length L1)))
+      #f
+      (match L0
+        [`(,x ,x* ...)
+         (match L1
+           [`(,y ,y* ...)
+            (and (match-exprs x y) (match-lists x* y*))])]
+        [`() #t])))
+
+(define (list-length L)
+  (match L
+    [`(,e ,es ...) (+ 1 (list-length es))]
+    [`() 0]))
+
 ; p : environment?
 ; e : expression?
 (define (val ρ e)
   (match e
-    [`(the ,type ,expr)
-     (val ρ expr)]
+
+    [`(the ,type ,expr) (val ρ expr)]
+    [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
+     (do-match ρ type-in type-out (val ρ expr) case0 case*)]
     [`(U ,lvl) (UNI (val ρ lvl))]
-    [`(Π ((,x ,A)) ,B)
+    [`(,(or 'Π 'Pi) ((,x ,A)) ,B)
      (PI (val ρ A) (CLOS ρ x B))]
     ;[`(λ (,x) ,b)
     ;added an or expression for the lambda
@@ -649,6 +575,16 @@
      (SIGMA (val ρ A) (CLOS ρ x D))]
     [`(cons ,a ,d)
      (PAIR (val ρ a) (val ρ d))]
+    ;added List expression
+    [`(List ,E) (LIST (val ρ E))]
+    ;added :: expression, not super sure if the pattern is correct
+    [`(:: ,head ,tail) (CONCAT:: (val ρ head) (val ρ tail))]
+    ;added NIL expression
+    ['nil (NIL)]
+    ;added Vec expression
+    [`(Vec ,E ,n) (VEC (val ρ E) (val ρ n))]
+    [`(vec:: ,head ,tail) (VCAT:: (val ρ head) (val ρ tail))]
+    ['vecnil (VECNIL)]
     [`(car ,pr)
      (do-car (val ρ pr))]
     [`(cdr ,pr)
@@ -656,8 +592,15 @@
     ['Nat (NAT)]
     ['zero (ZERO)]
     [`(add1 ,n) (ADD1 (val ρ n))]
+    [`(+ ,x ,y) (do-+ (val ρ x) (val ρ y))]
     [`(ind-Nat ,target ,motive ,base ,step)
      (do-ind-Nat (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
+    ;evaluating a ind-List expression
+    [`(ind-List ,target ,motive ,base, step)
+     (do-ind-List (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
+    ;evaluating a ind-Vec expression
+    [`(ind-Vec ,n ,target ,motive ,base, step)
+     (do-ind-Vec (val ρ n) (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
     [`(= ,A ,from ,to)
      (EQ (val ρ A) (val ρ from) (val ρ to))]
     ['same
@@ -676,7 +619,12 @@
     [`(,rator ,rand)
      (do-ap (val ρ rator) (val ρ rand))]
     [x #:when (var? x)
-     (cdr (assv x ρ))]))
+       (if (string-prefix? (symbol->string x) "rec-")
+           (match (cdr (assv x ρ))
+             [(LAM (CLOS p n b))
+              (LAM (CLOS (cons (assv x ρ) p) n b))])
+           (cdr (assv x ρ)))]))
+     
 
 ; v : value?
 (define (do-car v)
@@ -735,6 +683,24 @@
                           motive)
                      (THE (do-ap motive from)
                           base)))]))
+
+(define (do-+ x y)
+  (cond
+    [(and (NEU? x) (NEU? y)) (NEU (NAT) (N-+ (match x [(NEU (NAT) ne) ne]) (match y [(NEU (NAT) ne) ne])))]
+    [(NEU? x) (create-add1s (count-add1s y) x)]
+    [(NEU? y) (create-add1s (count-add1s x) y)]
+    [else (create-add1s (+ (count-add1s x) (count-add1s y)) (ZERO))]))
+    
+; x : value?
+(define (count-add1s x)
+  (match x
+    [(ZERO) 0]
+    [(ADD1 n) (+ 1 (count-add1s n))]))
+
+(define (create-add1s n e)
+  (if (= n 0) e (ADD1 (create-add1s (- n 1) e))))
+
+
 ; target : value?
 ; motive : value?
 ; base : value?
@@ -766,6 +732,67 @@
                       (H-O-CLOS 'ih
                                 (lambda (ih)
                                   (do-ap motive (ADD1 n-1)))))))))
+;writing the code which actually returns the value of the ind-List
+;expression provided the values of the arguments
+(define (do-ind-List target motive base step)
+  (match target
+    [(NIL) base]
+    [(CONCAT:: hed res) (do-ap (do-ap (do-ap step hed) res) (do-ind-List res motive base step))]
+    [(NEU (LIST E) ne)
+     (NEU (do-ap motive target)
+          (N-ind-List
+           ne
+           (THE (PI (LIST E)
+                    (H-O-CLOS 'k (lambda (k) (UNI))))
+                motive)
+           (THE (do-ap motive (NIL)) base)
+           (THE (ind-List-step-type motive E)
+                step)))]))
+(define (ind-List-step-type motive E)
+  ;removed brackets from around E on line 735
+  (PI E
+      (H-O-CLOS 'hed
+                (lambda (hed)
+                  (PI (LIST E)
+                      (H-O-CLOS 'tal
+                                (lambda (tal)
+                                  (PI (do-ap motive tal)
+                                      (H-O-CLOS 'ih
+                                                (lambda (ih)
+                                                  (do-ap motive (CONCAT:: hed tal))))))))))))
+
+
+;writing the code which actually returns the value of the ind-Vec
+;expression provided the values of the arguments
+(define (do-ind-Vec n target motive base step)
+  (match target
+    [(VECNIL) base]
+    [(VCAT:: hed res) (match n [(ADD1 t) (do-ap (do-ap (do-ap (do-ap step t) hed) res) (do-ind-Vec t res motive base step))])]
+    [(NEU (VEC E k) ne)
+     (NEU ((do-ap motive n) target)
+          (N-ind-Vec
+           n
+           ne
+           (THE (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (LIST E)
+                    (H-O-CLOS 'k (lambda (k) (UNI)))))))
+                motive)
+           (THE (do-ap (do-ap motive (ZERO)) (VECNIL)) base)
+           (THE (ind-Vec-step-type motive E)
+                step)))]))
+
+(define (ind-Vec-step-type motive E)
+  ;removed brackets from around E on line 735
+  (PI (NAT) (H-O-CLOS 'arg (lambda (arg)
+      (PI E
+      (H-O-CLOS 'hed
+                (lambda (hed)
+                  (PI (VEC E arg)
+                      (H-O-CLOS 'tal
+                                (lambda (tal)
+                                  (PI (do-ap (do-ap motive arg) tal)
+                                      (H-O-CLOS 'ih
+                                                (lambda (ih)
+                                                  (do-ap (do-ap motive (ADD1 arg)) (VCAT:: hed tal)))))))))))))))
 ; Γ : context?
 ; norm : norm?
 
@@ -776,6 +803,14 @@
     [(THE (NAT) (ZERO)) 'zero]
     [(THE (NAT) (ADD1 n))
      `(add1 ,(read-back-norm Γ (THE (NAT) n)))]
+    ;adding readback for nil
+    [(THE (LIST E) (NIL)) 'nil]
+    ;adding readback for ::
+    [(THE (LIST E) (CONCAT:: hed tal)) `(:: ,(read-back-norm Γ (THE E hed)) ,(read-back-norm Γ (THE (LIST E) tal)))]
+    ;adding readback for vecnil
+    [(THE (VEC E n) (VECNIL)) 'vecnil]
+    ;adding readback for vec::
+    [(THE (VEC E (ADD1 n)) (VCAT:: hed tal)) `(vec:: ,(read-back-norm Γ (THE E hed)) ,(read-back-norm Γ (THE (VEC E n) tal)))]
     [(THE (PI A B) f)
      (define x (closure-name B))
      (define y (freshen (map car Γ) x))
@@ -796,6 +831,10 @@
            ,(read-back-neutral Γ ne))]
     [(THE (EQ A from to) (SAME)) 'same]
     [(THE (ATOM) (QUOTE x)) `',x]
+    ;adding readback for the actual type name List E
+    [(THE (UNI n) (LIST E)) `(List ,(read-back-norm Γ (THE (UNI) E)))]
+    ;adding readbackk for the actual type name Vec E n
+    [(THE (UNI n) (VEC E n)) `(Vec ,(read-back-norm Γ (THE (UNI) E)) ,(read-back-norm Γ (THE (NAT) n)))]
     [(THE (UNI n) (NAT)) 'Nat]
     [(THE (UNI n) (ATOM)) 'Atom]
     [(THE (UNI n) (TRIVIAL)) 'Trivial]
@@ -840,6 +879,30 @@
                ,(read-back-norm Γ motive)
                ,(read-back-norm Γ base)
                ,(read-back-norm Γ step))]
+    ;added the readback for a ind-List expression
+    ;but this once again is reading back step as a normal expression, but what if its neutral?
+    [(N-ind-List ne motive base step)
+     `(ind-List ,(read-back-neutral Γ ne)
+               ,(read-back-norm Γ motive)
+               ,(read-back-norm Γ base)
+               ,(read-back-norm Γ step))]
+
+    ;added the readback for a ind-Vec expression
+    ;not sure whether to read both n and ne as neutral or pick one of them, should test both
+    ;what if readback norm just defaults to readback neutral if its actually neutral?
+    [(N-ind-Vec n ne motive base step)
+     `(ind-Vec ,(read-back-neutral Γ n)
+               ,(read-back-neutral Γ ne)
+               ,(read-back-norm Γ motive)
+               ,(read-back-norm Γ base)
+               ,(read-back-norm Γ step))]
+    
+
+    [(N-+ x y)
+     `(+ ,(read-back-neutral Γ x) ,(read-back-neutral Γ y))]
+    [(N-match type-in type-out expr case0 case*)
+     (append `(match ,type-in ,type-out ,(read-back-neutral Γ expr)) (cons case0 case*))]
+
     [(N-replace ne motive base)
      `(replace ,(read-back-neutral Γ ne)
                ,(read-back-norm Γ motive)
@@ -848,13 +911,154 @@
      `(ind-Absurd (the Absurd ,(read-back-neutral Γ ne))
                   ,(read-back-norm Γ motive))]))
 
+
+(define (check-cases Γ type-in type-out cases)
+  (match cases
+    [`() (go #t)]
+    [`(,case0 ,case* ...)
+       (match case0
+         [`(,m ,r) (let ([m-arbitraries (get-arbitraries m)]
+                         [r-arbitraries (get-arbitraries r)])
+                     (go-on ([m-arbitraries-out (check-dups m m-arbitraries)]
+                             [valid-binding-out (valid-binding m r m-arbitraries r-arbitraries)]
+                             [r-out
+                              (check-result-type Γ m r type-in type-out m-arbitraries r-arbitraries)]
+                             [case*-out (check-cases Γ type-in type-out case*)])
+                            (go cases)))])]))
+
+(define (valid-binding m r m-a r-a)
+  (if (empty? r-a) (go #t)
+      (cond
+        [(not (subset? (list->set r-a) (list->set m-a)))
+         (stop r "Arbitraries must be a subset of the arbitraries in the match check.")]
+        [(not (match m
+                [`(add1 ,n) #t]
+                [n #t]))
+         (stop m "You cannot bind variables from this match-check.")]
+        [else (go #t)])))
+
+(define (check-result-type Γ m r type-in type-out m-a r-a)
+  (if (empty? r-a)
+      (check Γ r type-out)
+      (let* ([a-to-f (arbitraries-to-fresh r-a Γ)]
+             [extended-ctx (extend-ctx-arbitraries-to-fresh Γ m a-to-f type-in)]
+             [r-out (replace-arbitraries-expr a-to-f r)])
+        (check extended-ctx (desugar r-out) type-out))))
+      
+(define (extend-ctx-arbitraries-to-fresh Γ m arbitraries-to-fresh type-in)
+  (match arbitraries-to-fresh
+    [`() Γ]
+    [`(,a-to-f0 ,a-to-f* ...)
+     (match a-to-f0
+       [`(,a ,f) (extend-ctx
+                  (extend-ctx-arbitraries-to-fresh Γ m a-to-f* type-in) f
+                  (get-type-a m a type-in))])]))
+
+(define (get-type-a m a type-in)
+  (match m
+    [`(add1 ,n) (NAT)]
+    [n type-in]))
+
+(define (arbitraries-to-fresh arbitraries Γ)
+  (map (lambda (a)
+         `(,a ,(freshen (map car Γ) a))) (remove-duplicates arbitraries)))
+
+(define (get-arbitraries m)
+     (cond
+       [(arbitrary? m) `(,m)]
+       [(b-list? m) (match m
+                      [`(,m0 ,m* ...) (append (get-arbitraries m0) (get-arbitraries m*))]
+                      [`() `()])]
+       [else `()]))
+
+(define (check-dups m L)
+  (if (check-duplicates L) (stop m "No duplicate arbitraries are allowed in match checks.")
+      (go L)))
+
+(define (match-is-total cases)
+   (match cases
+    [`() #f]
+    [`(,case0 ,case* ...)
+     (match case0
+       [`(,m ,r) (if (arbitrary? m) #t (match-is-total case*))])]))
+
+(define (get-recursive-calls name r)
+  (cond
+    [(b-list? r) (match r
+                   [`(,r0 ,r* ...) (cond
+                                     [(equal? name r0) `(,r)]
+                                     [(b-list? r0) (append (get-recursive-calls name r0)
+                                                           (get-recursive-calls name r*))]
+                                     [else (get-recursive-calls name r*)])]
+                   [`() `()])]
+    [`() `()]))
+
+(define (share-a-member L0 L1)
+  (match L0
+    [`(,e ,es ...) (cond
+                     [(member e L1) #t]
+                     [else (share-a-member es L1)])]
+    [`() #f]))
+
+(define (last-arg-strict-sub-expr m call)
+  (match call
+    [`() #f]
+    [`(,e ,es ...)
+     (let ([e-s (format "~a" e)]
+           [m-s (format "~a" m)])
+       (cond
+         [(empty? es) (and (and (string-contains? m-s e-s) (string-contains? e-s "!"))
+                                (< (string-length e-s) (string-length m-s)))]
+         [else (last-arg-strict-sub-expr m es)]))]))
+
+(define (all-calls-last-arg-strict-sub-expr m calls)
+  (match calls
+    [`() #t]
+    [`(,c0 ,c* ...) (and (last-arg-strict-sub-expr m c0)
+                         (all-calls-last-arg-strict-sub-expr m c*))]))
+
+(define (rec-check-cases name cases)
+  (match cases
+    [`() #t]
+    [`(,case0 ,case* ...)
+     [match case0
+       [`(,m ,r)
+        (and (all-calls-last-arg-strict-sub-expr m (get-recursive-calls name r))
+             (rec-check-cases name case*))]]]))
+     
+
+(define (check-recursive-form e)
+  (match e
+    [`(,(or 'λ 'lambda) (,expr) (match ,type-in ,type-out ,expr ,case0 ,case* ...))
+     (go (append `(match ,type-in ,type-out ,expr) (cons case0 case*)))]
+    [`(,(or 'λ 'lambda) (,x) ,b) (check-recursive-form b)]
+    [else
+     (stop e "Recursive functions must be of the form (λ (x y ... z) (match A B z ...))")]))
+
+(define (rec-check Γ name e t)
+  (go-on ([match-out (check-recursive-form e)])
+         (match match-out
+           [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
+             (if (rec-check-cases name (cons case0 case*))
+                 (go e)
+                 (stop e "The last argument of a recursive case must be a strict sub expression of the match pattern."))])))
+                        
+(define (rec-synth Γ name e)
+  (match e
+    [`(the ,ty ,expr)
+       (go-on ([synth-out (synth (extend-ctx Γ name (val (ctx->env Γ) ty)) e)]
+               [expr-out
+                (match synth-out
+                  [`(the ,ty-out ,expr-out) (rec-check Γ name expr-out (val (ctx->env Γ) ty-out))])])
+              (go synth-out))]))
+
 ; Γ : context?
 ; e : expr?
 
 (define (synth Γ e)
   (match e
     [`(the ,type ,expr)
-     (go-on ([`(the ,typeoftype ,ty) (synth Γ type)]
+         (go-on ([`(the ,typeoftype ,ty) (synth Γ type)]
              [`(U ,n) (U-check Γ typeoftype)]
              ;this next line might be useless, why not just use typeoftype?
              ;edit: in the above line I dont think i mean typeoftype, i think i mean ,ty instead of t-out in the return expression
@@ -863,8 +1067,18 @@
              ;[t-out (check Γ type (UNI (val (ctx->env Γ) n)))]
              ;[e-out (check Γ expr (val (ctx->env Γ) t-out))])
             [e-out (check Γ expr (val (ctx->env Γ) ty))])
-       ;(go `(the ,t-out ,e-out)))]
         (go `(the ,ty ,e-out)))]
+    [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
+     (go-on ([type-in-out (check Γ type-in (UNI))]
+             [type-out-out (check Γ type-out (UNI))]
+             [expr-out (check Γ expr (val (ctx->env Γ) type-in-out))]
+             [cases-out
+              (check-cases Γ (val (ctx->env Γ) type-in-out) (val (ctx->env Γ) type-out-out)
+                                  (cons case0 case*))])
+            (if (match-is-total (cons case0 case*))
+            (go `(the ,type-out-out
+                      ,(append `(match ,type-in-out ,type-out-out ,expr-out) (cons case0 case*))))
+            (stop e "Match clause is not total. You must include an else case")))]
     [`(U ,n)
      (go `(the (U (add1 ,n)) (U ,n)))]
     [`(,(or 'Σ 'Sigma) ((,x ,A)) ,D)
@@ -901,9 +1115,16 @@
           (go `(the ,(read-back-norm Γ (THE (val (ctx->env Γ) d-type) (val-of-closure D the-car)))
                     (cdr ,pr-out)))]
          [non-SIGMA
-          (stop e (format "Expected Σ, got ~v"
-                          (read-back-norm Γ (THE (val (ctx->env Γ) type-of-type) non-SIGMA))))]))]
+          (stop e (format "Expected Σ, got ~v" (read-back-norm Γ (THE (val (ctx->env Γ) type-of-type) non-SIGMA))))]))]
     ['Nat (go '(the (U zero) Nat))]
+    ;need to change U list
+    ;Adding synthesizing for List
+    [`(List ,E)
+     (go-on ([Ek (check Γ E (UNI))]) (go `(the U (List ,Ek))))]
+    ;adding synthesizing for Vec
+    [`(Vec ,E ,n)
+     (go-on ([Ek (check Γ E (UNI))] [nk (check Γ n (NAT))]) (go `(the U (Vec ,Ek ,nk))))]
+
     [`(ind-Nat ,target ,motive ,base ,step)
      (go-on ([target-out (check Γ target (NAT))]
              [`(the (,(or 'Π 'Pi) ((,x ,A)) ,B) ,mot) (synth Γ motive)]
@@ -922,8 +1143,45 @@
                    ;(THE (UNI (val (ctx->env Γ) n))
                     (THE (UNI (ZERO))
                         (do-ap motive-val (val (ctx->env Γ) target-out))))
-                 ;(ind-Nat ,target-out ,motive-out ,base-out ,step-out))))]
-                 (ind-Nat ,target-out ,mot ,base-out ,step-out))))]
+                        (ind-Nat ,target-out ,mot ,base-out ,step-out))))]
+;need to change U list
+    ;adding synthesizing for ind-List
+    ;note that it needs to be figured out what the type of the list entries are, for now theres the
+    ;assumption that the target has the form `(the A B)
+    [`(ind-List ,target ,motive ,base ,step)
+     (go-on ([`(the ,target-t-t ,target-out-t) (synth Γ target)]
+             [entry-t (go (match (val (ctx->env Γ) target-t-t) [(LIST E) E]))]
+             [target-out (go target-out-t)]
+             [motive-out (check Γ motive (PI (LIST entry-t) (H-O-CLOS 'n (lambda (_) (UNI)))))]
+             [motive-val (go (val (ctx->env Γ) motive-out))]
+             [base-out (check Γ base (do-ap motive-val (NIL)))]
+             [step-out (check Γ
+                              step
+                              (ind-List-step-type motive-val entry-t))])
+            (go `(the ,(read-back-norm
+                   Γ
+                   (THE (UNI)
+                        (do-ap motive-val (val (ctx->env Γ) target-out))))
+                 (ind-List ,target-out ,motive-out ,base-out ,step-out))))]
+    ;adding synthesizing for ind-Vec
+    ;note that it needs to be figured out what the type of the vec entries are, for now theres the
+    ;assumption that the target has the form `(the A B)
+    [`(ind-Vec ,n ,target ,motive ,base ,step)
+     (go-on ([n-out (check Γ n (NAT))]
+             [`(the ,target-t-t ,target-out-t) (synth Γ target)]
+             [entry-t (go (match (val (ctx->env Γ) target-t-t) [(VEC E n) E]))]
+             [target-out (go target-out-t)]
+             [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (VEC entry-t arg) (H-O-CLOS 'n (lambda (_) (UNI))))))))]
+             [motive-val (go (val (ctx->env Γ) motive-out))]
+             [base-out (check Γ base (do-ap (do-ap motive-val (ZERO)) (VECNIL)))]
+             [step-out (check Γ
+                              step
+                              (ind-Vec-step-type motive-val entry-t))])
+            (go `(the ,(read-back-norm
+                   Γ
+                   (THE (UNI)
+                        (do-ap (do-ap motive-val (val (ctx->env Γ) n-out)) (val (ctx->env Γ) target-out))))
+                 (ind-Vec ,n-out ,target-out ,motive-out ,base-out ,step-out))))]
     [`(= ,A ,from ,to)
      (go-on ([`(the ,A-t ,A-temp) (synth Γ A)]
              [`(U ,n) (U-check Γ A-t)]
@@ -1052,11 +1310,48 @@
        [(NAT) (go 'zero)]
        [non-NAT (stop e (format "Expected Nat, got ~v"
                                 (read-back-norm Γ (THE (UNI (ZERO)) non-NAT))))])]
+  ;need to change U list
     [`(add1 ,n)
      (match t
        [(NAT)
         (go-on ([n-out (check Γ n (NAT))])
           (go `(add1 ,n-out)))]
+       [non-NAT (stop e (format "Expected Nat, got ~v" (read-back-norm Γ (THE (UNI) non-NAT))))])]
+    ;adding checking for nil and ::, but the output message is weird, need to fix the (List E) part
+    ['nil
+     (match t
+       [(LIST E) (go 'nil)]
+       [non-LIST (stop e (format "Expected (List E), got ~v"
+                                (read-back-norm Γ (THE (UNI) non-LIST))))])]
+    [`(:: ,hed ,tal)
+     (match t
+       [(LIST E)
+        (go-on ([h-out (check Γ hed E)]
+                [t-out (check Γ tal (LIST E))])
+          (go `(:: ,h-out ,t-out)))]
+       [non-LIST (stop e (format "Expected (List E), got ~v"
+                                  (read-back-norm Γ (THE (UNI) non-LIST))))])]
+
+    ;adding checking for vecnil and vec::, but the output message is weird, need to fix the (Vec E) part
+    ['vecnil
+     (match t
+       [(VEC E (ZERO)) (go 'vecnil)]
+       [non-VEC (stop e (format "Expected (Vec E zero), got ~v"
+                                (read-back-norm Γ (THE (UNI) non-VEC))))])]
+    [`(vec:: ,hed ,tal)
+     (match t
+       [(VEC E (ADD1 n))
+        (go-on ([h-out (check Γ hed E)]
+                [t-out (check Γ tal (VEC E n))])
+          (go `(vec:: ,h-out ,t-out)))]
+       [non-LIST (stop e (format "Expected (Vec E (add1 n)), got ~v"
+                                   (read-back-norm Γ (THE (UNI) non-LIST))))])]
+
+    [`(+ ,x ,y)
+     (match t
+       [(NAT)
+        (go-on ([x-out (check Γ x (NAT))] [y-out (check Γ y (NAT))])
+               (go `(+ ,x-out ,y-out)))]
        [non-NAT (stop e (format "Expected Nat, got ~v"
                                 (read-back-norm Γ (THE (UNI (ZERO)) non-NAT))))])]
     ['same
@@ -1139,6 +1434,9 @@
                        `(add1 ,lvl)
                        e2))))
 
+
+
+
 ; Γ : context?
 ; input : (or/c (list/c 'define symbol? expression?) expression?)
 
@@ -1146,13 +1444,16 @@
   (match input
     [`(define ,x ,e)
      (if (assv x Γ)
-         (stop x "Already defined")
-         (go-on ([`(the ,ty ,expr) (synth Γ e)])
+         (stop x "Already defined")        
+         (go-on ([`(the ,ty ,expr)
+                  (if (string-prefix? (symbol->string x) "rec-")
+                      (rec-synth Γ x (desugar e))
+                      (synth Γ (desugar e)))])
            (let ([ρ (ctx->env Γ)])
              (go (cons (cons x (def (val ρ ty) (val ρ expr)))
                        Γ)))))]
     [e
-     (go-on ([`(the ,ty ,expr) (synth Γ e)])
+     (go-on ([`(the ,ty ,expr) (synth Γ (desugar e))])
        (let ([ρ (ctx->env Γ)])
          (begin
            (printf "Type: ~v\nNormal form:~v\n"
@@ -1170,6 +1471,44 @@
      (go-on ([new-Γ (interact Γ d)])
        (run-program new-Γ rest))]))
 
+; s : expr?
+(define (desugar e)
+  (match e
+    [`(the ,A ,x) `(the ,(desugar A) ,(desugar x))]
+    [`(,(or 'λ 'lambda) (,x ,y ...) ,b) (desugar-λ e)]
+    [`(,(or 'Π 'Pi) (,d0 ,d1 ...) ,range) (desugar-Π e)]
+    [`(,rator ,rand) #:when (not (keyword? rator)) `(,(desugar rator) ,(desugar rand))]
+    [`(,rator ,rand0 ,rand1 ...) #:when (not (keyword? rator)) (desugar `,(cons `(,rator ,rand0) rand1))]
+    [`(,keyword ,rand0 ,rand1 ...) `,(cons keyword (cons (desugar rand0) (desugar-rands rand1)))]                 
+    [_ e]))
+  
+
+; e : expr?
+(define (desugar-λ e)
+  (match e
+    [`(,(or 'λ 'lambda) (,x ,y ,z ...) ,b)
+     `(λ (,x) ,(desugar-λ `(λ ,(cons y z) ,b)))]
+    [not-sugared e]))
+
+(define (desugar-Π e)
+  (match e
+    [`(,(or 'Π 'Pi) (,d0 ,d1 ,d2 ...) ,range)
+     `(Π (,d0) ,(desugar-Π `(Π ,(cons d1 d2) ,range)))]
+    [not-sugared e]))
+
+(define (desugar-rands e)
+  (match e
+    [`(,rand0 ,rand1 ...) `,(cons (desugar rand0) (desugar-rands rand1))]
+    [rand0 (desugar rand0)]))
+
+; -----------------------------------------------------------
+
+
+(run-program `() `((the (Pi((n Nat))(Vec Nat n)) (lambda(x)(ind-Nat (the Nat x)
+                                                                (the (Pi ((k Nat)) U) (lambda(k) (Vec Nat k)))
+                                                                (the (Vec Nat zero) vecnil)
+                                                                (the (Pi ((nt Nat)) (Pi ((par (Vec Nat nt))) (Vec Nat (add1 nt))))
+                                                                     (lambda(r) (lambda (s) (vec:: zero s)))))))))
 ;(trace run-program)
 ;(trace interact)
 ;(trace convert)
