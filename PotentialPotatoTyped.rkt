@@ -1303,3 +1303,10 @@
     [rand0 (desugar rand0)]))
 
 ; -----------------------------------------------------------
+
+
+(run-program `() `((the (Pi((n Nat))(Vec Nat n)) (lambda(x)(ind-Nat (the Nat x)
+                                                                (the (Pi ((k Nat)) U) (lambda(k) (Vec Nat k)))
+                                                                (the (Vec Nat zero) vecnil)
+                                                                (the (Pi ((nt Nat)) (Pi ((par (Vec Nat nt))) (Vec Nat (add1 nt))))
+                                                                     (lambda(r) (lambda (s) (vec:: zero s)))))))))
