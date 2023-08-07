@@ -114,6 +114,8 @@
 
 (struct ZERO () #:transparent)
 
+(struct INFTY () #:transparent)
+
 ; pred : value
 (struct ADD1 (pred) #:transparent)
 
@@ -197,7 +199,8 @@
         'vec::
         'ind-Vec
         'ind-List 
-        'match))
+        'match
+        'infty))
 
 (define a-matchables
   (list 'zero 'Nat 'Atom))
@@ -283,6 +286,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;SUBTYPER
 (define (α-subtype-aux e1 e2 xs1 xs2)
   (match* (e1 e2)
+    [(`(U ,n1) `(U infty)) #t]
     [(`(U (add1 ,n1)) `(U (add1 ,n2))) (α-subtype-aux `(U ,n1) `(U ,n2) xs1 xs2)]
     [(`(U ,n1) `(U (add1,n2))) (α-subtype-aux `(U ,n1) `(U ,n2) xs1 xs2)]
     [(`(U (add1 ,n1)) `(U ,n2)) #f]
@@ -364,6 +368,10 @@
 (struct QUOTE (symbol) #:transparent)
 
 (struct UNI (level) #:transparent)
+
+(struct LIST (entry-type) #:transparent)
+(struct NIL () #:transparent)
+(struct CONCAT:: (head tail) #:transparent)
 
 ;VECTOR: adding struct vecnil vcat:: and VEC
 (struct VEC (entry-type len) #:transparent)
@@ -591,6 +599,7 @@
      (do-cdr (val ρ pr))]
     ['Nat (NAT)]
     ['zero (ZERO)]
+    ['infty (INFTY)]
     [`(add1 ,n) (ADD1 (val ρ n))]
     [`(+ ,x ,y) (do-+ (val ρ x) (val ρ y))]
     [`(ind-Nat ,target ,motive ,base ,step)
@@ -717,7 +726,7 @@
           (N-ind-Nat
            ne
            (THE (PI (NAT)
-                    (H-O-CLOS 'k (lambda (k) (UNI (ZERO)))))
+                    (H-O-CLOS 'k (lambda (k) (UNI (INFTY)))))
                 motive)
            (THE (do-ap motive (ZERO)) base)
            (THE (ind-Nat-step-type motive)
@@ -743,7 +752,7 @@
           (N-ind-List
            ne
            (THE (PI (LIST E)
-                    (H-O-CLOS 'k (lambda (k) (UNI))))
+                    (H-O-CLOS 'k (lambda (k) (UNI (INFTY)))))
                 motive)
            (THE (do-ap motive (NIL)) base)
            (THE (ind-List-step-type motive E)
@@ -774,7 +783,7 @@
            n
            ne
            (THE (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (LIST E)
-                    (H-O-CLOS 'k (lambda (k) (UNI)))))))
+                    (H-O-CLOS 'k (lambda (k) (UNI (INFTY))))))))
                 motive)
            (THE (do-ap (do-ap motive (ZERO)) (VECNIL)) base)
            (THE (ind-Vec-step-type motive E)
@@ -801,6 +810,7 @@
 (define (read-back-norm Γ norm)
   (match norm
     [(THE (NAT) (ZERO)) 'zero]
+    [(THE (NAT) (INFTY)) 'infty]
     [(THE (NAT) (ADD1 n))
      `(add1 ,(read-back-norm Γ (THE (NAT) n)))]
     ;adding readback for nil
@@ -832,9 +842,9 @@
     [(THE (EQ A from to) (SAME)) 'same]
     [(THE (ATOM) (QUOTE x)) `',x]
     ;adding readback for the actual type name List E
-    [(THE (UNI n) (LIST E)) `(List ,(read-back-norm Γ (THE (UNI) E)))]
+    [(THE (UNI n) (LIST E)) `(List ,(read-back-norm Γ (THE (UNI n) E)))]
     ;adding readbackk for the actual type name Vec E n
-    [(THE (UNI n) (VEC E n)) `(Vec ,(read-back-norm Γ (THE (UNI) E)) ,(read-back-norm Γ (THE (NAT) n)))]
+    [(THE (UNI n) (VEC E s)) `(Vec ,(read-back-norm Γ (THE (UNI n) E)) ,(read-back-norm Γ (THE (NAT) s)))]
     [(THE (UNI n) (NAT)) 'Nat]
     [(THE (UNI n) (ATOM)) 'Atom]
     [(THE (UNI n) (TRIVIAL)) 'Trivial]
@@ -1060,6 +1070,7 @@
     [`(the ,type ,expr)
          (go-on ([`(the ,typeoftype ,ty) (synth Γ type)]
              [`(U ,n) (U-check Γ typeoftype)]
+              ;[_ (check Γ type (UNI (INFTY)))]
              ;this next line might be useless, why not just use typeoftype?
              ;edit: in the above line I dont think i mean typeoftype, i think i mean ,ty instead of t-out in the return expression
              ;going to only have the U-check on typeoftype this will allow somthing like (the (Pi((n Nat)) (U (add1 n))) (lambda(n) (U n))).
@@ -1120,15 +1131,24 @@
     ;need to change U list
     ;Adding synthesizing for List
     [`(List ,E)
-     (go-on ([Ek (check Γ E (UNI))]) (go `(the U (List ,Ek))))]
+     (go-on ([`(the ,tE ,vE) (synth Γ E)]
+             ;[Ek (check Γ E (UNI))]
+             [`(U ,n) (U-check Γ tE)]
+             )
+            (go `(the ,tE (List ,vE))))]
     ;adding synthesizing for Vec
     [`(Vec ,E ,n)
-     (go-on ([Ek (check Γ E (UNI))] [nk (check Γ n (NAT))]) (go `(the U (Vec ,Ek ,nk))))]
+     (go-on ([`(the ,tE ,vE) (synth Γ E)]
+             [`(U ,k) (U-check Γ tE)]
+             ;[Ek (check Γ E (UNI))]
+             [nk (check Γ n (NAT))])
+            (go `(the (U ,k) (Vec ,vE ,nk))))]
 
     [`(ind-Nat ,target ,motive ,base ,step)
      (go-on ([target-out (check Γ target (NAT))]
              [`(the (,(or 'Π 'Pi) ((,x ,A)) ,B) ,mot) (synth Γ motive)]
              [`(U ,n) (U-check Γ B)]
+             [_ (check Γ target (val (ctx->env Γ) A))]
              ;since im already synthesizing the motive and confirming that B is a U, then do i really need to check the motive against this type?
              ;[motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'n (lambda (_) (UNI (val (ctx->env Γ) n))))))]
              ;[motive-val (go (val (ctx->env Γ) motive-out))]
@@ -1152,17 +1172,25 @@
      (go-on ([`(the ,target-t-t ,target-out-t) (synth Γ target)]
              [entry-t (go (match (val (ctx->env Γ) target-t-t) [(LIST E) E]))]
              [target-out (go target-out-t)]
-             [motive-out (check Γ motive (PI (LIST entry-t) (H-O-CLOS 'n (lambda (_) (UNI)))))]
-             [motive-val (go (val (ctx->env Γ) motive-out))]
+             
+             ;[motive-out (check Γ motive (PI (LIST entry-t) (H-O-CLOS 'n (lambda (_) (UNI)))))]
+             ;[motive-val (go (val (ctx->env Γ) motive-out))]
+             [`(the (,(or 'Π 'Pi) ((,x ,A)) ,B) ,mot) (synth Γ motive)]
+             [`(U ,n) (U-check Γ B)]
+             [k (check Γ target-out-t (val (ctx->env Γ) A))]
+             [motive-val (go (val (ctx->env Γ) mot))]
+
+             
              [base-out (check Γ base (do-ap motive-val (NIL)))]
              [step-out (check Γ
                               step
                               (ind-List-step-type motive-val entry-t))])
+            ;in the next line im just going to replace UNI val... with UNI zero, because i dont think that read-back-norm cares about uni type
             (go `(the ,(read-back-norm
                    Γ
-                   (THE (UNI)
+                   (THE (UNI (ZERO))
                         (do-ap motive-val (val (ctx->env Γ) target-out))))
-                 (ind-List ,target-out ,motive-out ,base-out ,step-out))))]
+                 (ind-List ,target-out ,mot ,base-out ,step-out))))]
     ;adding synthesizing for ind-Vec
     ;note that it needs to be figured out what the type of the vec entries are, for now theres the
     ;assumption that the target has the form `(the A B)
@@ -1171,15 +1199,22 @@
              [`(the ,target-t-t ,target-out-t) (synth Γ target)]
              [entry-t (go (match (val (ctx->env Γ) target-t-t) [(VEC E n) E]))]
              [target-out (go target-out-t)]
-             [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (VEC entry-t arg) (H-O-CLOS 'n (lambda (_) (UNI))))))))]
+             
+             [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (VEC entry-t arg) (H-O-CLOS 'n (lambda (_) (UNI (INFTY)))))))))]
              [motive-val (go (val (ctx->env Γ) motive-out))]
+             ;[`(the (,(or 'Π 'Pi) ((,x ,A)) ,B) ,mot) (synth Γ motive)]
+             ;[`(the (,(or 'Π 'Pi) ((,x ,A)) (,(or 'Π 'Pi) ((,t ,B)) ,C)) ,mot) (synth Γ motive)]
+             ;[`(U ,n) (U-check Γ C)]
+             ;[k (check Γ target-out-t A)]
+             ;[motive-val (go (val (ctx->env Γ) mot))]
+             
              [base-out (check Γ base (do-ap (do-ap motive-val (ZERO)) (VECNIL)))]
              [step-out (check Γ
                               step
                               (ind-Vec-step-type motive-val entry-t))])
             (go `(the ,(read-back-norm
                    Γ
-                   (THE (UNI)
+                   (THE (UNI (ZERO))
                         (do-ap (do-ap motive-val (val (ctx->env Γ) n-out)) (val (ctx->env Γ) target-out))))
                  (ind-Vec ,n-out ,target-out ,motive-out ,base-out ,step-out))))]
     [`(= ,A ,from ,to)
@@ -1276,7 +1311,14 @@
     [(`zero `zero) `zero]
     [(k `(add1 ,k)) `(add1 ,k)]
     [(`(add1 ,k) k) `(add1 ,k)]
-    [(k k) k]))
+    [(k k) k]
+    [(`zero k) k]
+    [(k `zero) k]
+    [(`infty k) `infty]
+    [(k `infty) `infty]
+    [(k `(add1 ,t)) `(add1 ,(greater-Nat k t)) ]
+    [(`(add1 ,t) k) `(add1 ,(greater-Nat k t)) ]
+    ))
 
 
 
@@ -1310,6 +1352,11 @@
        [(NAT) (go 'zero)]
        [non-NAT (stop e (format "Expected Nat, got ~v"
                                 (read-back-norm Γ (THE (UNI (ZERO)) non-NAT))))])]
+    ['infty
+     (match t
+       [(NAT) (go 'infty)]
+       [non-NAT (stop e (format "Expected Nat, got ~v"
+                                (read-back-norm Γ (THE (UNI (INFTY)) non-NAT))))])]
   ;need to change U list
     [`(add1 ,n)
      (match t
@@ -1322,7 +1369,7 @@
      (match t
        [(LIST E) (go 'nil)]
        [non-LIST (stop e (format "Expected (List E), got ~v"
-                                (read-back-norm Γ (THE (UNI) non-LIST))))])]
+                                (read-back-norm Γ (THE (UNI (ZERO)) non-LIST))))])]
     [`(:: ,hed ,tal)
      (match t
        [(LIST E)
@@ -1330,14 +1377,14 @@
                 [t-out (check Γ tal (LIST E))])
           (go `(:: ,h-out ,t-out)))]
        [non-LIST (stop e (format "Expected (List E), got ~v"
-                                  (read-back-norm Γ (THE (UNI) non-LIST))))])]
+                                  (read-back-norm Γ (THE (UNI (ZERO)) non-LIST))))])]
 
     ;adding checking for vecnil and vec::, but the output message is weird, need to fix the (Vec E) part
     ['vecnil
      (match t
        [(VEC E (ZERO)) (go 'vecnil)]
        [non-VEC (stop e (format "Expected (Vec E zero), got ~v"
-                                (read-back-norm Γ (THE (UNI) non-VEC))))])]
+                                (read-back-norm Γ (THE (UNI (ZERO)) non-VEC))))])]
     [`(vec:: ,hed ,tal)
      (match t
        [(VEC E (ADD1 n))
@@ -1345,7 +1392,7 @@
                 [t-out (check Γ tal (VEC E n))])
           (go `(vec:: ,h-out ,t-out)))]
        [non-LIST (stop e (format "Expected (Vec E (add1 n)), got ~v"
-                                   (read-back-norm Γ (THE (UNI) non-LIST))))])]
+                                   (read-back-norm Γ (THE (UNI (ZERO)) non-LIST))))])]
 
     [`(+ ,x ,y)
      (match t
@@ -1402,7 +1449,7 @@
              ;weird parameterizations, but more simply, we'll just say it doesn't have a type
              ;making it so that (Pi ((n Nat)) (U n)) is not a valid expression feels too restrictive. Its
              ;akin to how certain expressions in Pie don't have types
-             [_ (subtype-convert Γ t (val (ctx->env Γ) t-out) t)])
+             [_ (subtype-convert Γ n2 (val (ctx->env Γ) t-out) t)])
              
        (go e-out))]))
 
@@ -1502,25 +1549,30 @@
     [rand0 (desugar rand0)]))
 
 ; -----------------------------------------------------------
-
-
-(run-program `() `((the (Pi((n Nat))(Vec Nat n)) (lambda(x)(ind-Nat (the Nat x)
-                                                                (the (Pi ((k Nat)) U) (lambda(k) (Vec Nat k)))
-                                                                (the (Vec Nat zero) vecnil)
-                                                                (the (Pi ((nt Nat)) (Pi ((par (Vec Nat nt))) (Vec Nat (add1 nt))))
-                                                                     (lambda(r) (lambda (s) (vec:: zero s)))))))))
+;(trace synth)
+;(trace check)
+;(trace do-ap)
+;(trace val-of-closure)
+;(run-program `() `((define fn (the (Pi((n Nat))(Vec Nat n)) (lambda(x)(ind-Nat (the Nat x)
+;                                                                (the (Pi ((k Nat)) (U zero)) (lambda(p) (Vec Nat p)))
+;                                                                (the (Vec Nat zero) vecnil)
+;                                                                (the (Pi ((nt Nat)) (Pi ((par (Vec Nat nt))) (Vec Nat (add1 nt))))
+;                                                                     (lambda(r) (lambda (s) (vec:: zero s)))))))) (fn (the Nat (add1 zero)))))
 ;(trace run-program)
 ;(trace interact)
 ;(trace convert)
 ;(trace U-check)
-(trace synth)
-(trace check)
+
+;(trace val-of-closure)
+;(trace subtype-convert)
+;(trace α-subtype-aux)
+
 ;(trace α-equiv?)
 ;(trace α-equiv-aux)
 ;(trace subtype?)
 ;(trace α-subtype-aux)
-(trace val)
-(trace greater-Nat)
+;(trace val)
+;(trace greater-Nat)
 ;(trace subtype-convert)
 ;(trace read-back-norm)
 ;(run-program `() `((the (U (add1 (add1 zero))) (U zero))))
@@ -1537,16 +1589,10 @@
 ;(run-program `() `((the (Pi ((x Nat)) (U (add1 (add1 x)))) (lambda (x) (U (add1 x))))))
 
 
-;(run-program `() `((the (U (add1(add1 zero)))
-;                        (ind-Nat
-;                                 (the Nat (add1 zero))
-;                                 (the (Pi ((n Nat)) (U (add1 (add1 n)))) (lambda (x) (U (add1 x))))
-;                                 (the (U (add1 zero)) (U zero))
-;                                 (the (Pi ((n Nat)) (Pi ((k (U (add1 n)))) (U (add1 n)))))))))
 
 ;(run-program `() `((the (U (add1 (add1 zero)))
- ;                       (ind-Nat
- ;                                (the Nat (add1 zero))
+;                        (ind-Nat
+;                                 (the Nat (add1 zero))
 ;                                 (the (Pi ((n Nat)) (U (add1 (add1 n)))) (lambda (x) (U (add1 x))))
 ;                                 (the (U (add1 zero)) (U zero))
 ;                                 (the (Pi ((n Nat)) (Pi ((k (U (add1 n)))) (U (add1 (add1 n))))) (lambda (x) (lambda (y) (U (add1 x)))))))))
@@ -1562,14 +1608,14 @@
 ;                                      (lambda (x) (lambda (y) (U (add1 x)))))))))
 ;                   (fn (the Nat (add1 zero)))))
 
-;(run-program `() `((define fn (the (Pi ((n Nat)) (U (add1 (ind-Nat
-;                                 (the Nat n)
- ;                                (the (Pi ((n Nat)) (U (add1 (add1 n))))
+;(run-program `() `((define fn (the (Pi ((n Nat)) (ind-Nat
+;                                 (the Nat (add1 n))
+;                                (the (Pi ((n Nat)) (U (add1 (add1 n))))
 ;                                      (lambda (x) (U (add1 x))))
 ;                                 (the (U (add1 zero))
 ;                                      (U zero))
-;                                 (the (Pi ((n Nat)) (Pi ((k (U (add1 n)))) (U (add1 (add1 n)))))
-;                                      (lambda (x) (lambda (y) (U (add1 x)))))))))
+ ;                                (the (Pi ((n Nat)) (Pi ((k (U (add1 n)))) (U (add1 (add1 n)))))
+ ;                                     (lambda (x) (lambda (y) (U (add1 x)))))))
 ;                        (lambda(n)(ind-Nat
 ;                                 (the Nat n)
 ;                                 (the (Pi ((n Nat)) (U (add1 (add1 n))))
@@ -1578,10 +1624,49 @@
 ;                                      (U zero))
 ;                                 (the (Pi ((n Nat)) (Pi ((k (U (add1 n)))) (U (add1 (add1 n)))))
 ;                                      (lambda (x) (lambda (y) (U (add1 x)))))))))
-                   ;(fn (the Nat (add1 zero)))
+;                   (fn (the Nat (add1 zero)))
 ;                   ))
                                       ;(lambda (x) (lambda (y) (U (add1 x)))))))))))
 
 ;(run-program `() `((the (Pi ((n Nat)) (Pi ((y (U n))) Nat)) (lambda(x)(lambda(y) zero)))))
 
 ;(go '(the (Π ((n Nat)) (U (add1 (add1 n)))) (λ (x) (U (add1 x)))))
+
+;(run-program `() `((define work (the (Pi ((x (List Nat))) (Pi ((pri (Σ ((x Nat)) Nat))) Nat))
+;                                       (lambda (x) (lambda (y) (ind-List
+;                                                                x
+;                                               (the (Pi ((n (List Nat))) (U zero)) (lambda (n) Nat))
+;                                               (car y)
+;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c Nat)) Nat))) (lambda (t) (lambda (h) (lambda (v) v )))))))))
+;                       ((work (:: zero (:: zero nil))) (cons (add1 zero) zero))))
+
+
+;(run-program `() `((define fn (the (Pi ((n Nat)) (Pi ((t (List (U (add1 n))))) (U (add1 n))))
+;                                   (lambda(x)
+;                                     (lambda (y)
+;                                       (ind-List y
+;                                                 (the (Pi ((t (List (U (add1 x))))) (U (add1 (add1 x)))) (lambda(g) (U (add1 x))))
+;                                                 (the (U (add1 x)) (U x))
+;                                                 (the (Pi ((k (U (add1 x)))) (Pi ((es (List (U (add1 x))))) (Pi ((lt (U (add1 x)))) (U (add1 x)))))
+;                                                      (lambda(gh) (lambda(pr) (lambda(ald) gh)))))))))
+;                   ((fn (the Nat (add1 (add1 (add1 zero))))) (the (List (U (add1 (add1 (add1 (add1 zero)))))) (:: (U (add1 (add1 (add1 zero)))) (:: (U zero) nil))))))
+
+;(run-program `() `((define fn (the (Pi ((n Nat)) (Pi ((k Nat)) (Pi ((vk (Vec (U (add1 n)) k))) (U (add1 n)))))
+;                                   (lambda(x)
+;                                     (lambda(y)
+ ;                                      (lambda(z)
+;                                         (ind-Vec y
+;                                                  z
+;                                                  (the (Pi ((at Nat)) (Pi (( gs (Vec (U (add1 x)) at))) (U (add1 (add1 x)))))
+;                                                       (lambda(gp) (lambda(almst) (U (add1 x)))))
+;                                                  (the (U (add1 x)) (U x))
+ ;                                                 (the (Pi ((tu Nat)) (Pi ((tf (U (add1 x))))
+;                                                                          (Pi ((sn (Vec (U (add1 x)) tu))) (Pi ((vpr (U (add1 x)))) (U (add1 x))))))
+;                                                       (lambda(dfd)
+;                                                         (lambda(dfje)
+;                                                           (lambda(rehd)
+;                                                             (lambda(redd)
+;                                                               dfje)))))))))))
+;                   (((fn (the Nat (add1 zero))) (the Nat (add1 zero))) (the (Vec (U (add1 (add1 zero))) (add1 zero)) (vec:: (U zero) vecnil)))))
+                                                       
+                                                  
