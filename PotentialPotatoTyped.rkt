@@ -4,7 +4,7 @@
 ;imports for chapter 4 error handling, specifically go-on
 (require (for-syntax syntax/parse))
 (require (for-syntax racket/base syntax/parse))
-
+(require racket/trace)
 
 ; env : Env
 ; var : symbol?
@@ -114,6 +114,8 @@
 
 (struct ZERO () #:transparent)
 
+(struct INFTY () #:transparent)
+
 ; pred : value
 (struct ADD1 (pred) #:transparent)
 
@@ -197,7 +199,8 @@
         'vec::
         'ind-Vec
         'ind-List 
-        'match))
+        'match
+        'infty))
 
 (define a-matchables
   (list 'zero 'Nat 'Atom 'List 'Vec 'nil 'vecnil))
@@ -231,6 +234,9 @@
 
 (define (α-equiv-aux e1 e2 xs1 xs2)
   (match* (e1 e2)
+    ;[(`(U (add1 ,n1)) `(U (add1 ,n2))) (α-equiv-aux `(U ,n1) `(U ,n2))]
+    ;[(`(U (add1 ,n1)) `(U ,n2)) (α-equiv-aux `(U ,n1) `(U ,n2))]
+    ;[(`(U (add1 ,n1)) `(U ,n2)) (α-equiv-aux `(U ,n1) `(U ,n2))]
     [(kw kw)
      #:when (keyword? kw)
      #t]
@@ -273,6 +279,62 @@
           (α-equiv-aux rand1 rand2 xs1 xs2))]
     [(_ _) #f]))
 
+
+(define (subtype? e1 e2)
+  (α-subtype-aux e1 e2 '() '()))
+
+;;;;;;;;;;;;;;;;;;;;;;SUBTYPER
+(define (α-subtype-aux e1 e2 xs1 xs2)
+  (match* (e1 e2)
+    [(`(U ,n1) `(U infty)) #t]
+    [(`(U (add1 ,n1)) `(U (add1 ,n2))) (α-subtype-aux `(U ,n1) `(U ,n2) xs1 xs2)]
+    [(`(U ,n1) `(U (add1,n2))) (α-subtype-aux `(U ,n1) `(U ,n2) xs1 xs2)]
+    [(`(U (add1 ,n1)) `(U ,n2)) #f]
+    [(`(U ,n1) `(U ,n2)) (α-equiv-aux n1 n2 xs1 xs2)]
+    [(kw kw)
+     #:when (keyword? kw)
+     #t]
+    [(x y)
+     #:when (and (var? x) (var? y))
+     (match* ((assv x xs1) (assv y xs2))
+       [(#f #f) (eqv? x y)]
+       [((cons _ b1) (cons _ b2)) (eqv? b1 b2)]
+       [(_ _) #f])]
+    [(`(Π ((,x ,A1)) ,B1) `(Π ((,y ,A2)) ,B2))
+     (and (α-subtype-aux A1 A2 xs1 xs2)
+          (let ([fresh (gensym)])
+            (let ([bigger1 (cons (cons x fresh) xs1)]
+                  [bigger2 (cons (cons y fresh) xs2)])
+              (α-subtype-aux B1 B2 bigger1 bigger2))))]
+    [(`(Σ ((,x ,A1)) ,B1) `(Σ ((,y ,A2)) ,B2))
+     (and (α-subtype-aux A1 A2 xs1 xs2)
+          (let ([fresh (gensym)])
+            (let ([bigger1 (cons (cons x fresh) xs1)]
+                  [bigger2 (cons (cons y fresh) xs2)])
+              (α-subtype-aux B1 B2 bigger1 bigger2))))]
+    [(`',x  `',y)
+     (eqv? x y)]
+    ; This, together with read-back-norm, implements the η law for Absurd.
+    [(`(the Absurd ,e1) `(the Absurd ,e2))
+     #t]
+    [((cons op args1) (cons op args2))
+     #:when (keyword? op)
+     (and (= (length args1) (length args2))
+          (for/and ([arg1 (in-list args1)]
+                    [arg2 (in-list args2)])
+            (α-subtype-aux arg1 arg2 xs1 xs2)))]
+    [((list rator1 rand1) (list rator2 rand2))
+     (and (α-subtype-aux rator1 rator2 xs1 xs2)
+          (α-subtype-aux rand1 rand2 xs1 xs2))]
+    [(_ _) #f]))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (greater-Nat-t A B)
+  (match* (A B)
+    [(`(add1 ,n ) `(add1 ,k ))  `(greater-Nat k n)]
+    [(`zero `(add1 ,k)) #f]
+    [(`(add1 ,k) zero) #t]))
+
 ; domain : value?
 ; range : closure?
 (struct PI (domain range) #:transparent)
@@ -305,9 +367,8 @@
 ; symbol : symbol?
 (struct QUOTE (symbol) #:transparent)
 
-(struct UNI () #:transparent)
+(struct UNI (level) #:transparent)
 
-;LIST: adding structs nil, concat:: and List
 (struct LIST (entry-type) #:transparent)
 (struct NIL () #:transparent)
 (struct CONCAT:: (head tail) #:transparent)
@@ -507,13 +568,16 @@
 ; e : expression?
 (define (val ρ e)
   (match e
+
     [`(the ,type ,expr) (val ρ expr)]
     [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
      (do-match ρ type-in type-out (val ρ expr) case0 case*)]
-    ['U (UNI)]
+    [`(U ,lvl) (UNI (val ρ lvl))]
     [`(,(or 'Π 'Pi) ((,x ,A)) ,B)
      (PI (val ρ A) (CLOS ρ x B))]
-    [`(λ (,x) ,b)
+    ;[`(λ (,x) ,b)
+    ;added an or expression for the lambda
+    [`(,(or 'λ 'lambda) (,x) ,b)
      (LAM (CLOS ρ x b))]
     [`(Σ ((,x ,A)) ,D)
      (SIGMA (val ρ A) (CLOS ρ x D))]
@@ -535,6 +599,7 @@
      (do-cdr (val ρ pr))]
     ['Nat (NAT)]
     ['zero (ZERO)]
+    ['infty (INFTY)]
     [`(add1 ,n) (ADD1 (val ρ n))]
     [`(+ ,x ,y) (do-+ (val ρ x) (val ρ y))]
     [`(ind-Nat ,target ,motive ,base ,step)
@@ -549,7 +614,10 @@
      (EQ (val ρ A) (val ρ from) (val ρ to))]
     ['same
      (SAME)]
+    ;it might be necessary to synthesize the motive to know the type of certain things,
+    ;but this could mean excessive annotations unfortunately so you should test it out a bit
     [`(replace ,target ,motive ,base)
+     
      (do-replace (val ρ target) (val ρ motive) (val ρ base))]
     ['Trivial (TRIVIAL)]
     ['sole (SOLE)]
@@ -596,22 +664,31 @@
 ; target : value?
 ; motive : value?
 
+;added uni arg, what if i want to be able to show that it implies statements of higher types??
+;okay now you have to add a (the blah blah) when describing ur motive lol
+;alright new update, it seems as if the UNI ZERO part here is only for the purposes of readback neutral
+;and readback neutral doesn't really care about the type of the UNI, so it seems like it would actually be fine
+;if i just left the UNI ZERO here even thought i can use types which involve higher uni levels
 (define (do-ind-Absurd target motive)
   (match target
     [(NEU (ABSURD) ne)
-     (NEU motive (N-ind-Absurd ne (THE (UNI) motive)))]))
+     (NEU motive (N-ind-Absurd ne (THE (UNI (ZERO)) motive)))]))
 
 ; target : value?
 ; motive : value?
 ; base : value?
 
+
+;i think ill need to synth the type of the motive if im allowing the motive to return higher types like U_1 etc.
+;update: once again it seems that this uni thing in the h-o-clos doesnt actually get used and it goes into the readback neutral eventualy
+;but the readbacknorm doesn't use it
 (define (do-replace target motive base)
   (match target
     [(SAME) base]
     [(NEU (EQ A from to) ne)
      (NEU (do-ap motive to)
           (N-replace ne
-                     (THE (PI A (H-O-CLOS 'x (lambda (_) (UNI))))
+                     (THE (PI A (H-O-CLOS 'x (lambda (_) (UNI (ZERO)))))
                           motive)
                      (THE (do-ap motive from)
                           base)))]))
@@ -638,6 +715,8 @@
 ; base : value?
 ; step : value?
 
+;similar to the other do-functions, the hard coded UNI is not proper, but its unnecessary to make the n-value correct
+;since it eventually endds up in readbacknorm or something which doesn't care about the actual n value
 (define (do-ind-Nat target motive base step)
   (match target
     [(ZERO) base]
@@ -647,7 +726,7 @@
           (N-ind-Nat
            ne
            (THE (PI (NAT)
-                    (H-O-CLOS 'k (lambda (k) (UNI))))
+                    (H-O-CLOS 'k (lambda (k) (UNI (INFTY)))))
                 motive)
            (THE (do-ap motive (ZERO)) base)
            (THE (ind-Nat-step-type motive)
@@ -673,7 +752,7 @@
           (N-ind-List
            ne
            (THE (PI (LIST E)
-                    (H-O-CLOS 'k (lambda (k) (UNI))))
+                    (H-O-CLOS 'k (lambda (k) (UNI (INFTY)))))
                 motive)
            (THE (do-ap motive (NIL)) base)
            (THE (ind-List-step-type motive E)
@@ -704,7 +783,7 @@
            n
            ne
            (THE (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (LIST E)
-                    (H-O-CLOS 'k (lambda (k) (UNI)))))))
+                    (H-O-CLOS 'k (lambda (k) (UNI (INFTY))))))))
                 motive)
            (THE (do-ap (do-ap motive (ZERO)) (VECNIL)) base)
            (THE (ind-Vec-step-type motive E)
@@ -726,9 +805,12 @@
 ; Γ : context?
 ; norm : norm?
 
+;added some (UNI n)s but this might have to be modified slightly
+;alright, so it doesn't even seem like this function ever cares about the UNI type
 (define (read-back-norm Γ norm)
   (match norm
     [(THE (NAT) (ZERO)) 'zero]
+    [(THE (NAT) (INFTY)) 'infty]
     [(THE (NAT) (ADD1 n))
      `(add1 ,(read-back-norm Γ (THE (NAT) n)))]
     ;adding readback for nil
@@ -742,6 +824,8 @@
     [(THE (PI A B) f)
      (define x (closure-name B))
      (define y (freshen (map car Γ) x))
+     ;note that the (THE (val-of-closure B y-val) shouldn't be like super important for anything here,
+     ;since readbacknormm doesn't care about the n in the (U n) annotation
      (define y-val (NEU A (N-var y)))
      `(λ (,y)
         ,(read-back-norm (extend-ctx Γ y A)
@@ -757,31 +841,35 @@
            ,(read-back-neutral Γ ne))]
     [(THE (EQ A from to) (SAME)) 'same]
     [(THE (ATOM) (QUOTE x)) `',x]
-    [(THE (UNI) (NAT)) 'Nat]
     ;adding readback for the actual type name List E
-    [(THE (UNI) (LIST E)) `(List ,(read-back-norm Γ (THE (UNI) E)))]
+    [(THE (UNI n) (LIST E)) `(List ,(read-back-norm Γ (THE (UNI n) E)))]
     ;adding readbackk for the actual type name Vec E n
-    [(THE (UNI) (VEC E n)) `(Vec ,(read-back-norm Γ (THE (UNI) E)) ,(read-back-norm Γ (THE (NAT) n)))]
-    [(THE (UNI) (ATOM)) 'Atom]
-    [(THE (UNI) (TRIVIAL)) 'Trivial]
-    [(THE (UNI) (ABSURD)) 'Absurd]
-    [(THE (UNI) (EQ A from to))
-     `(= ,(read-back-norm Γ (THE (UNI) A))
+    [(THE (UNI n) (VEC E s)) `(Vec ,(read-back-norm Γ (THE (UNI n) E)) ,(read-back-norm Γ (THE (NAT) s)))]
+    [(THE (UNI n) (NAT)) 'Nat]
+    [(THE (UNI n) (ATOM)) 'Atom]
+    [(THE (UNI n) (TRIVIAL)) 'Trivial]
+    [(THE (UNI n) (ABSURD)) 'Absurd]
+    [(THE (UNI n) (EQ A from to))
+     `(= ,(read-back-norm Γ (THE (UNI n) A))
          ,(read-back-norm Γ (THE A from))
          ,(read-back-norm Γ (THE A to)))]
-    [(THE (UNI) (SIGMA A D))
+    ;the issue here might be that A is a (UNI n) and D is a lower UNI by im assignning them both the high UNI, this is a
+    ;variance rules thing
+    ;update: i dont think that readbacknorm cares about uni type
+    [(THE (UNI n) (SIGMA A D))
      (define x (closure-name D))
      (define y (freshen (map car Γ) x))
-     `(Σ ((,y ,(read-back-norm Γ (THE (UNI) A))))
+     `(Σ ((,y ,(read-back-norm Γ (THE (UNI n) A))))
          ,(read-back-norm (extend-ctx Γ y A)
-                          (THE (UNI) (val-of-closure D (NEU A (N-var y))))))]
-    [(THE (UNI) (PI A B))
+                          (THE (UNI n) (val-of-closure D (NEU A (N-var y))))))]
+    [(THE (UNI n) (PI A B))
      (define x (closure-name B))
      (define y (freshen (map car Γ) x))
-     `(Π ((,y ,(read-back-norm Γ (THE (UNI) A))))
+     `(Π ((,y ,(read-back-norm Γ (THE (UNI n) A))))
          ,(read-back-norm (extend-ctx Γ y A)
-                          (THE (UNI) (val-of-closure B (NEU A (N-var y))))))]
-    [(THE (UNI) (UNI)) 'U]
+                          (THE (UNI n) (val-of-closure B (NEU A (N-var y))))))]
+    ;over here i dont think its required to enforce that k>n, that should maybe be done in another function??
+    [(THE (UNI k) (UNI n)) `(U ,(read-back-norm Γ (THE (NAT) n)))]
     [(THE t1 (NEU t2 ne))
      (read-back-neutral Γ ne)]))
 
@@ -991,9 +1079,17 @@
 (define (synth Γ e)
   (match e
     [`(the ,type ,expr)
-     (go-on ([t-out (check Γ type (UNI))]
-             [e-out (check Γ expr (val (ctx->env Γ) t-out))])
-       (go `(the ,t-out ,e-out)))]    
+         (go-on ([`(the ,typeoftype ,ty) (synth Γ type)]
+             [`(U ,n) (U-check Γ typeoftype)]
+              ;[_ (check Γ type (UNI (INFTY)))]
+             ;this next line might be useless, why not just use typeoftype?
+             ;edit: in the above line I dont think i mean typeoftype, i think i mean ,ty instead of t-out in the return expression
+             ;going to only have the U-check on typeoftype this will allow somthing like (the (Pi((n Nat)) (U (add1 n))) (lambda(n) (U n))).
+             ;it just guarentees that type is a (U something), but it can be parameterized like in the above example
+             ;[t-out (check Γ type (UNI (val (ctx->env Γ) n)))]
+             ;[e-out (check Γ expr (val (ctx->env Γ) t-out))])
+            [e-out (check Γ expr (val (ctx->env Γ) ty))])
+        (go `(the ,ty ,e-out)))]
     [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
      (go-on ([type-in-out (check Γ type-in (UNI))]
              [type-out-out (check Γ type-out (UNI))]
@@ -1005,50 +1101,81 @@
             (go `(the ,type-out-out
                       ,(append `(match ,type-in-out ,type-out-out ,expr-out) (cons case0 case*))))
             (stop e "Match clause is not total. You must include an else case")))]
-    ['U
-     (go '(the U U))]
+    [`(U ,n)
+     (go `(the (U (add1 ,n)) (U ,n)))]
     [`(,(or 'Σ 'Sigma) ((,x ,A)) ,D)
-     (go-on ([A-out (check Γ A (UNI))]
-             [D-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) D (UNI))])
-       (go `(the U (Σ ((,x ,A-out)) ,D-out))))]
+     (go-on ([`(the ,A-type ,A-temp) (synth Γ A)]
+             [`(U ,n) (U-check Γ A-type)]
+             [A-out (check Γ A (UNI (val (ctx->env Γ) n)))]
+             
+             [`(the ,D-type ,D-temp) (synth (extend-ctx Γ x (val (ctx->env Γ) A-out)) D)]
+             [`(U ,k) (U-check Γ D-type)]
+             ;some of these parts were commented out in a similar way to Pi
+             ;[D-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) D (UNI (check Γ A (UNI (val (ctx->env Γ) n)))))]
+             )
+            
+       ;(go `(the (U ,(greater-Nat (cdr (cdr A-out)) (cdr (cdr D-out)))) (Σ ((,x ,(car A-out))) ,(car D-out)))))]
+        (go `(the (U ,(greater-Nat n k)) (Σ ((,x ,A-temp)) ,D-temp))))]
     [`(car ,pr)
-     (go-on ([`(the ,pr-ty ,pr-out) (synth Γ pr)])
+     (go-on ([`(the ,pr-ty ,pr-out) (synth Γ pr)]
+             [`(the ,pr-ty-ty ,stuff) (synth Γ pr-ty)])
        (match (val (ctx->env Γ) pr-ty)
          [(SIGMA A D)
-          (go `(the ,(read-back-norm Γ (THE (UNI) A)) (car ,pr-out)))]
+          (go `(the ,(read-back-norm Γ (THE (val (ctx->env Γ) pr-ty-ty) A)) (car ,pr-out)))]
          [non-SIGMA
           (stop e (format "Expected Σ, got ~v"
-                          (read-back-norm Γ (THE (UNI) non-SIGMA))))]))]
+                          (read-back-norm Γ (THE (val (ctx->env Γ) pr-ty-ty) non-SIGMA))))]))]
+    ;spaghetti! this can definitely be cut down a bit
     [`(cdr ,pr)
-     (go-on ([`(the ,pr-ty ,pr-out) (synth Γ pr)])
+     (go-on ([`(the ,pr-ty ,pr-out) (synth Γ pr)]
+             [`(the ,type-of-type ,ty) (synth Γ pr-ty)]
+             [M-expr (go (match ty [`(,(or 'Σ 'Sigma) ((,x ,A)) ,M) M]))]
+             [`(the ,d-type ,d) (synth Γ M-expr)])
        (match (val (ctx->env Γ) pr-ty)
          [(SIGMA A D)
           (define the-car (do-car (val (ctx->env Γ) pr-out)))
-          (go `(the ,(read-back-norm Γ (THE (UNI) (val-of-closure D the-car)))
+          (go `(the ,(read-back-norm Γ (THE (val (ctx->env Γ) d-type) (val-of-closure D the-car)))
                     (cdr ,pr-out)))]
          [non-SIGMA
-          (stop e (format "Expected Σ, got ~v"
-                          (read-back-norm Γ (THE (UNI) non-SIGMA))))]))]
-    ['Nat (go '(the U Nat))]
+          (stop e (format "Expected Σ, got ~v" (read-back-norm Γ (THE (val (ctx->env Γ) type-of-type) non-SIGMA))))]))]
+    ['Nat (go '(the (U zero) Nat))]
+    ;need to change U list
     ;Adding synthesizing for List
     [`(List ,E)
-     (go-on ([Ek (check Γ E (UNI))]) (go `(the U (List ,Ek))))]
+     (go-on ([`(the ,tE ,vE) (synth Γ E)]
+             ;[Ek (check Γ E (UNI))]
+             [`(U ,n) (U-check Γ tE)]
+             )
+            (go `(the ,tE (List ,vE))))]
     ;adding synthesizing for Vec
     [`(Vec ,E ,n)
-     (go-on ([Ek (check Γ E (UNI))] [nk (check Γ n (NAT))]) (go `(the U (Vec ,Ek ,nk))))]
+     (go-on ([`(the ,tE ,vE) (synth Γ E)]
+             [`(U ,k) (U-check Γ tE)]
+             ;[Ek (check Γ E (UNI))]
+             [nk (check Γ n (NAT))])
+            (go `(the (U ,k) (Vec ,vE ,nk))))]
+
     [`(ind-Nat ,target ,motive ,base ,step)
      (go-on ([target-out (check Γ target (NAT))]
-             [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'n (lambda (_) (UNI)))))]
-             [motive-val (go (val (ctx->env Γ) motive-out))]
+             [`(the (,(or 'Π 'Pi) ((,x ,A)) ,B) ,mot) (synth Γ motive)]
+             [`(U ,n) (U-check Γ B)]
+             [_ (check Γ target (val (ctx->env Γ) A))]
+             ;since im already synthesizing the motive and confirming that B is a U, then do i really need to check the motive against this type?
+             ;[motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'n (lambda (_) (UNI (val (ctx->env Γ) n))))))]
+             ;[motive-val (go (val (ctx->env Γ) motive-out))]
+             [motive-val (go (val (ctx->env Γ) mot))]
              [base-out (check Γ base (do-ap motive-val (ZERO)))]
              [step-out (check Γ
                               step
                               (ind-Nat-step-type motive-val))])
+       ;in the next line im just going to replace UNI val... with UNI zero, because i dont think that read-back-norm cares about uni type
        (go `(the ,(read-back-norm
                    Γ
-                   (THE (UNI)
+                   ;(THE (UNI (val (ctx->env Γ) n))
+                    (THE (UNI (ZERO))
                         (do-ap motive-val (val (ctx->env Γ) target-out))))
-                 (ind-Nat ,target-out ,motive-out ,base-out ,step-out))))]
+                        (ind-Nat ,target-out ,mot ,base-out ,step-out))))]
+;need to change U list
     ;adding synthesizing for ind-List
     ;note that it needs to be figured out what the type of the list entries are, for now theres the
     ;assumption that the target has the form `(the A B)
@@ -1056,17 +1183,25 @@
      (go-on ([`(the ,target-t-t ,target-out-t) (synth Γ target)]
              [entry-t (go (match (val (ctx->env Γ) target-t-t) [(LIST E) E]))]
              [target-out (go target-out-t)]
-             [motive-out (check Γ motive (PI (LIST entry-t) (H-O-CLOS 'n (lambda (_) (UNI)))))]
-             [motive-val (go (val (ctx->env Γ) motive-out))]
+             
+             ;[motive-out (check Γ motive (PI (LIST entry-t) (H-O-CLOS 'n (lambda (_) (UNI)))))]
+             ;[motive-val (go (val (ctx->env Γ) motive-out))]
+             [`(the (,(or 'Π 'Pi) ((,x ,A)) ,B) ,mot) (synth Γ motive)]
+             [`(U ,n) (U-check Γ B)]
+             [k (check Γ target-out-t (val (ctx->env Γ) A))]
+             [motive-val (go (val (ctx->env Γ) mot))]
+
+             
              [base-out (check Γ base (do-ap motive-val (NIL)))]
              [step-out (check Γ
                               step
                               (ind-List-step-type motive-val entry-t))])
+            ;in the next line im just going to replace UNI val... with UNI zero, because i dont think that read-back-norm cares about uni type
             (go `(the ,(read-back-norm
                    Γ
-                   (THE (UNI)
+                   (THE (UNI (ZERO))
                         (do-ap motive-val (val (ctx->env Γ) target-out))))
-                 (ind-List ,target-out ,motive-out ,base-out ,step-out))))]
+                 (ind-List ,target-out ,mot ,base-out ,step-out))))]
     ;adding synthesizing for ind-Vec
     ;note that it needs to be figured out what the type of the vec entries are, for now theres the
     ;assumption that the target has the form `(the A B)
@@ -1075,72 +1210,144 @@
              [`(the ,target-t-t ,target-out-t) (synth Γ target)]
              [entry-t (go (match (val (ctx->env Γ) target-t-t) [(VEC E n) E]))]
              [target-out (go target-out-t)]
-             [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (VEC entry-t arg) (H-O-CLOS 'n (lambda (_) (UNI))))))))]
+             
+             [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (VEC entry-t arg) (H-O-CLOS 'n (lambda (_) (UNI (INFTY)))))))))]
              [motive-val (go (val (ctx->env Γ) motive-out))]
+             ;[`(the (,(or 'Π 'Pi) ((,x ,A)) ,B) ,mot) (synth Γ motive)]
+             ;[`(the (,(or 'Π 'Pi) ((,x ,A)) (,(or 'Π 'Pi) ((,t ,B)) ,C)) ,mot) (synth Γ motive)]
+             ;[`(U ,n) (U-check Γ C)]
+             ;[k (check Γ target-out-t A)]
+             ;[motive-val (go (val (ctx->env Γ) mot))]
+             
              [base-out (check Γ base (do-ap (do-ap motive-val (ZERO)) (VECNIL)))]
              [step-out (check Γ
                               step
                               (ind-Vec-step-type motive-val entry-t))])
             (go `(the ,(read-back-norm
                    Γ
-                   (THE (UNI)
+                   (THE (UNI (ZERO))
                         (do-ap (do-ap motive-val (val (ctx->env Γ) n-out)) (val (ctx->env Γ) target-out))))
                  (ind-Vec ,n-out ,target-out ,motive-out ,base-out ,step-out))))]
     [`(= ,A ,from ,to)
-     (go-on ([A-out (check Γ A (UNI))]
-             [A-val (go (val (ctx->env Γ) A-out))]
+     (go-on ([`(the ,A-t ,A-temp) (synth Γ A)]
+             [`(U ,n) (U-check Γ A-t)]
+             [A-out (check A-temp (UNI (val (ctx->env Γ) n) ))]
+             [A-val (go (val (ctx->env Γ) A))]
              [from-out (check Γ from A-val)]
              [to-out (check Γ to A-val)])
-       (go `(the U (= ,A-out ,from-out ,to-out))))]
+       (go `(the (U ,n) (= ,A-out ,from-out ,to-out))))]
+    ;type is directly syntehsized for the motive, this feels a bit inneficient, but its necessary so it allows more complex statements
+    ;would be better if it was also considered where i can synthesize the base and the to and take the max fo the two types
+    ;or i can apply motive to the from and to and then synthesize a type for both and then take the max of the two
     [`(replace ,target ,motive ,base)
      (go-on ([`(the ,target-t ,target-out) (synth Γ target)])
        (match (val (ctx->env Γ) target-t)
          [(EQ A from to)
-          (go-on ([motive-out
+          (go-on ([`(,(or 'Π 'Pi) ((,k ,S)) ,M) (synth Γ motive)]
+                  [`(U ,n) (U-check Γ M)]
+                  [motive-out
                    (check Γ
                           motive
-                          (PI A (H-O-CLOS 'x (lambda (x) (UNI)))))]
+                          (PI A (H-O-CLOS 'x (lambda (x) (UNI (val (ctx->env Γ) n))))))]
                   [motive-v (go (val (ctx->env Γ) motive-out))]
                   [base-out (check Γ base (do-ap motive-v from))])
-            (go `(the ,(read-back-norm Γ (THE (UNI) (do-ap motive-v to)))
+            (go `(the ,(read-back-norm Γ (THE (UNI (val (ctx->env Γ) n)) (do-ap motive-v to)))
                       (replace ,target-out ,motive-out ,base-out))))]
          [non-EQ
           (stop target (format "Expected =, but type is ~a" non-EQ))]))]
+    ;need to take the max of the types U, Uof(A) and Uof(B)
     [`(,(or 'Π 'Pi) ((,x ,A)) ,B)
-     (go-on ([A-out (check Γ A (UNI))]
-             [B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI))])
-       (go `(the U (Π ((,x ,A-out)) ,B-out))))]
-    ['Trivial (go '(the U Trivial))]
-    ['Absurd (go '(the U Absurd))]
+     
+     (go-on ([`(the ,A-type ,A-temp) (synth Γ A)]
+             [`(U ,n) (U-check Γ A-type)]
+             [A-out (check Γ A (UNI (val (ctx->env Γ) n)))]
+             
+             [`(the ,B-type ,B-temp) (synth (extend-ctx Γ x (val (ctx->env Γ) A-out)) B)]
+             [`(U ,k) (U-check Γ B-type)]
+             ;this next line is incorrect, checking if B is the same type level as A doesn't make sense
+             ;[B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI (check Γ A (UNI (val (ctx->env Γ) n)))))]
+             )
+            
+       ;(go `(the (U ,(greater-Nat (cdr (cdr A-out)) (cdr (cdr B-out)))) (Π ((,x ,(car A-out))) ,(car B-out)))))]
+    (go `(the (U ,(greater-Nat n k)) (Π ((,x ,A-temp)) ,B-temp))))]
+
+     ;(go-on ([A-out (check Γ A (UNI (ZERO)) #t)]
+     ;        [B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI (ZERO)) #t)])
+     ;  (go `(the (U ,(greater-Nat (cdr (cdr A-out)) (cdr (cdr B-out)))) (Π ((,x ,(car A-out))) ,(car B-out)))))]
+    ['Trivial (go '(the (U zero) Trivial))]
+    ['Absurd (go '(the (U zero) Absurd))]
     [`(ind-Absurd ,target ,motive)
      (go-on ([target-out (check Γ target (ABSURD))]
-             [motive-out (check Γ motive (UNI))])
+             [`(the ,A ,B) (synth Γ motive)]
+             [`(U ,n) (U-check Γ A)]
+             ;this next line is probably redundant, try and remove some useless stuff
+             [motive-out (check Γ motive (UNI (val (ctx->env Γ) n)))])
        (go `(the ,motive-out (ind-Absurd ,target-out ,motive-out))))]
-    ['Atom (go '(the U Atom))]
+    ['Atom (go '(the (U zero) Atom))]
     [`(,rator ,rand)
-     (go-on ([`(the ,rator-t ,rator-out) (synth Γ rator)])
+     (go-on ([`(the (,(or 'Π 'Pi) ((,k ,S)) ,M) ,rator-out) (synth Γ rator)]
+             ;thiss line 893 is a bit inneficient considering line 892
+             [`(the ,rator-t ,rator-out) (synth Γ rator)]
+             [`(the ,rator-t-t ,temp) (synth Γ rator-t)]
+             [`(U ,v) (U-check Γ rator-t-t)]
+             [`(the ,M-type ,M-temp) (synth (extend-ctx Γ k (val (ctx->env Γ) S)) M)]
+             [`(U ,g) (U-check Γ M-type)])
+       ;once again readbacknorm doesn't care about universe type, so im going to fix it to be UNI ZERO
        (match (val (ctx->env Γ) rator-t)
          [(PI A B)
           (go-on ([rand-out (check Γ rand A)])
             (go `(the ,(read-back-norm Γ
-                                       (THE (UNI)
+                                       ;(THE (UNI (val (ctx->env Γ) g))
+                                        (THE (UNI (ZERO))
                                             (val-of-closure B
                                                             (val (ctx->env Γ)
                                                                  rand-out))))
                       (,rator-out ,rand-out))))]
          [non-PI (stop rator
                        (format "Expected a Π type, but this is a ~a"
-                               (read-back-norm Γ (THE (UNI) non-PI))))]))]
+                               (read-back-norm Γ (THE (UNI (val (ctx->env Γ) v)) non-PI))))]))]
+    ;i filled the following section in with UNI zeroes because it doesn't seem like the readbacknorm function actually cares about UNI level
     [x #:when (var? x)
-     (go-on ([t (lookup-type x Γ)])
-       (go `(the ,(read-back-norm Γ (THE (UNI) t)) ,x)))]
+     (go-on ([t (lookup-type x Γ)]
+             [`(the ,t-type ,temp) (synth Γ (read-back-norm Γ (THE (UNI (ZERO)) t)))])
+       (go `(the ,(read-back-norm Γ (THE (UNI (ZERO)) t)) ,x)))]
     [none-of-the-above (stop e "Can't synthesize a type")]))
+
+
+(define (greater-Nat A B)
+  (match* (A B)
+    [(`(add1 ,n ) `(add1 ,k ))  `(add1 ,(greater-Nat k n))]
+    [(`zero `(add1 ,k)) `(add1 ,k)]
+    [(`(add1 ,k) `zero) `(add1 ,k)]
+    [(`zero `zero) `zero]
+    [(k `(add1 ,k)) `(add1 ,k)]
+    [(`(add1 ,k) k) `(add1 ,k)]
+    [(k k) k]
+    [(`zero k) k]
+    [(k `zero) k]
+    [(`infty k) `infty]
+    [(k `infty) `infty]
+    [(k `(add1 ,t)) `(add1 ,(greater-Nat k t)) ]
+    [(`(add1 ,t) k) `(add1 ,(greater-Nat k t)) ]
+    ))
+
+
+
 
 
 ; Γ : context?
 ; e : expr?
 ; t : value?
 
+;i can add some subsumption here
+;if bool is true, that means you want to check which universe it *is* an element of. returns a (cons (go whatever) `(U n))
+;note that the synth call here might be a bit circular
+(define (U-check Γ expr)
+  (match expr
+    [`(U ,n) (go `(U ,n))]
+    [non-U (stop expr (format "Expected (U n) got ~v" (read-back-norm Γ (val (ctx->env Γ) (synth Γ expr) non-U))))]))
+
+;once again read-back-norm doesn't seem to care about UNI type
 (define (check Γ e t)
   (match e
     [`(cons ,a ,d)
@@ -1150,25 +1357,30 @@
                 [d-out (check Γ d (val-of-closure D (val (ctx->env Γ) a-out)))])
           (go `(cons ,a-out ,d-out)))]
        [non-SIGMA (stop e (format "Expected Σ, got ~v"
-                                  (read-back-norm Γ (THE (UNI) non-SIGMA))))])]
+                                  (read-back-norm Γ (THE (UNI (ZERO)) non-SIGMA))))])]
     ['zero
      (match t
        [(NAT) (go 'zero)]
        [non-NAT (stop e (format "Expected Nat, got ~v"
-                                (read-back-norm Γ (THE (UNI) non-NAT))))])]
+                                (read-back-norm Γ (THE (UNI (ZERO)) non-NAT))))])]
+    ['infty
+     (match t
+       [(NAT) (go 'infty)]
+       [non-NAT (stop e (format "Expected Nat, got ~v"
+                                (read-back-norm Γ (THE (UNI (INFTY)) non-NAT))))])]
+  ;need to change U list
     [`(add1 ,n)
      (match t
        [(NAT)
         (go-on ([n-out (check Γ n (NAT))])
           (go `(add1 ,n-out)))]
-       [non-NAT (stop e (format "Expected Nat, got ~v"
-                                (read-back-norm Γ (THE (UNI) non-NAT))))])]
+       [non-NAT (stop e (format "Expected Nat, got ~v" (read-back-norm Γ (THE (UNI) non-NAT))))])]
     ;adding checking for nil and ::, but the output message is weird, need to fix the (List E) part
     ['nil
      (match t
        [(LIST E) (go 'nil)]
        [non-LIST (stop e (format "Expected (List E), got ~v"
-                                (read-back-norm Γ (THE (UNI) non-LIST))))])]
+                                (read-back-norm Γ (THE (UNI (ZERO)) non-LIST))))])]
     [`(:: ,hed ,tal)
      (match t
        [(LIST E)
@@ -1176,14 +1388,14 @@
                 [t-out (check Γ tal (LIST E))])
           (go `(:: ,h-out ,t-out)))]
        [non-LIST (stop e (format "Expected (List E), got ~v"
-                                  (read-back-norm Γ (THE (UNI) non-LIST))))])]
+                                  (read-back-norm Γ (THE (UNI (ZERO)) non-LIST))))])]
 
     ;adding checking for vecnil and vec::, but the output message is weird, need to fix the (Vec E) part
     ['vecnil
      (match t
        [(VEC E (ZERO)) (go 'vecnil)]
        [non-VEC (stop e (format "Expected (Vec E zero), got ~v"
-                                (read-back-norm Γ (THE (UNI) non-VEC))))])]
+                                (read-back-norm Γ (THE (UNI (ZERO)) non-VEC))))])]
     [`(vec:: ,hed ,tal)
      (match t
        [(VEC E (ADD1 n))
@@ -1191,7 +1403,7 @@
                 [t-out (check Γ tal (VEC E n))])
           (go `(vec:: ,h-out ,t-out)))]
        [non-LIST (stop e (format "Expected (Vec E (add1 n)), got ~v"
-                                   (read-back-norm Γ (THE (UNI) non-LIST))))])]
+                                   (read-back-norm Γ (THE (UNI (ZERO)) non-LIST))))])]
 
     [`(+ ,x ,y)
      (match t
@@ -1199,21 +1411,20 @@
         (go-on ([x-out (check Γ x (NAT))] [y-out (check Γ y (NAT))])
                (go `(+ ,x-out ,y-out)))]
        [non-NAT (stop e (format "Expected Nat, got ~v"
-                                (read-back-norm Γ (THE (UNI) non-NAT))))])]
-
+                                (read-back-norm Γ (THE (UNI (ZERO)) non-NAT))))])]
     ['same
      (match t
        [(EQ A from to)
         (go-on ([_ (convert Γ A from to)])
           (go 'same))]
        [non-= (stop e (format "Expected =, got ~v"
-                              (read-back-norm Γ (THE (UNI) non-=))))])]
+                              (read-back-norm Γ (THE (UNI (ZERO)) non-=))))])]
     ['sole
      (match t
        [(TRIVIAL)
         (go 'sole)]
        [non-Trivial (stop e (format "Expected Trivial, got ~v"
-                                    (read-back-norm Γ (THE (UNI) non-Trivial))))])]
+                                    (read-back-norm Γ (THE (UNI (ZERO)) non-Trivial))))])]
     [`(,(or 'λ 'lambda) (,x) ,b)
      (match t
        [(PI A B)
@@ -1221,29 +1432,64 @@
         (go-on ([b-out (check (extend-ctx Γ x A) b (val-of-closure B x-val))])
           (go `(λ (,x) ,b-out)))]
        [non-PI (stop e (format "Expected Π, got ~v"
-                               (read-back-norm Γ (THE (UNI) non-PI))))])]
+                               (read-back-norm Γ (THE (UNI (ZERO)) non-PI))))])]
     [`',a
      (match t
        [(ATOM)
         (go `',a)]
        [non-ATOM (stop e (format "Expected Atom, got ~v"
-                                 (read-back-norm Γ (THE (UNI) non-ATOM))))])]
+                                 (read-back-norm Γ (THE (UNI (ZERO)) non-ATOM))))])]
     [none-of-the-above
      (go-on ([`(the ,t-out ,e-out) (synth Γ e)]
-             [_ (convert Γ (UNI) t (val (ctx->env Γ) t-out))])
+             ;the next line is for testing
+             ;[`(the ,thing1 ,thing2) (synth Γ `(the chiedby zero))]
+             [`(the ,t-of-t ,temp) (synth Γ t-out)]
+             ;need to take the max of the two U_ns probably
+             ;need to actually be checking if t-out is a *subtype* of t, not just alpha equivalent
+             ;alpha equivalence is what convert does by default
+             ;you should leave the alpha equivalence checker unchanged because some things do need to be precisely equal
+             ;such as x and y in a (= A x y)
+             [`(U ,n) (U-check Γ t-of-t)]
+             ;[`(U (add1 (add1, n))) (U-check Γ t-of-t)]
+             [`(the ,t-of-t2 ,temp2) (synth Γ (read-back-norm Γ (THE (UNI (ZERO)) t)))]
+             [`(U ,n2) (U-check Γ t-of-t2)]
+             ;I dont actually think that the subtype converter requires the type of the type, this is
+             ;something that is relevant because some types dont actually have types: eg (Pi ((n Nat)) (U n))
+             ;and as a result the synthesizer gives the type of (Pi ((n Nat)) (U n)) as something like (U (add1 n)) where n is a var
+             ;this is obviously not viable, unless you created like some special var n, which allows this to have a type and like
+             ;weird parameterizations, but more simply, we'll just say it doesn't have a type
+             ;making it so that (Pi ((n Nat)) (U n)) is not a valid expression feels too restrictive. Its
+             ;akin to how certain expressions in Pie don't have types
+             [_ (subtype-convert Γ n2 (val (ctx->env Γ) t-out) t)])
+             
        (go e-out))]))
 
 ; t : value?
 ; v1 : value?
 ; v2 : value?
 
+;once again recall that readbacknorm doesn't care about uni type
+;the onyl time v1 and v2 are not going to be types here is the (=...) statement
 (define (convert Γ t v1 v2)
   (define e1 (read-back-norm Γ (THE t v1)))
   (define e2 (read-back-norm Γ (THE t v2)))
   (if (α-equiv? e1 e2)
       (go 'ok)
       (stop e1 (format "Expected to be the same ~v as ~v"
-                       (read-back-norm Γ (THE (UNI) t))
+                       (read-back-norm Γ (THE (match t [(UNI n) (UNI (ADD1 n))]) t))
+                       e2))))
+
+;lvl here is not is a nat, could be neutral, not in (ADD1... form, its in (add1... form
+(define (subtype-convert Γ lvl t1 t2)
+  ;read-back-norm doesn't care about uni type
+  ;(define e1 (read-back-norm Γ (THE t t1)))
+  ;(define e2 (read-back-norm Γ (THE t t2)))
+  (define e1 (read-back-norm Γ (THE (UNI (ZERO)) t1)))
+  (define e2 (read-back-norm Γ (THE (UNI (ZERO)) t2)))
+  (if (subtype? e1 e2)
+      (go 'ok)
+      (stop e1 (format "Expected to be the same ~v as ~v"
+                       `(add1 ,lvl)
                        e2))))
 
 
@@ -1314,3 +1560,124 @@
     [rand0 (desugar rand0)]))
 
 ; -----------------------------------------------------------
+;(trace synth)
+;(trace check)
+;(trace do-ap)
+;(trace val-of-closure)
+;(run-program `() `((define fn (the (Pi((n Nat))(Vec Nat n)) (lambda(x)(ind-Nat (the Nat x)
+;                                                                (the (Pi ((k Nat)) (U zero)) (lambda(p) (Vec Nat p)))
+;                                                                (the (Vec Nat zero) vecnil)
+;                                                                (the (Pi ((nt Nat)) (Pi ((par (Vec Nat nt))) (Vec Nat (add1 nt))))
+;                                                                     (lambda(r) (lambda (s) (vec:: zero s)))))))) (fn (the Nat (add1 zero)))))
+;(trace run-program)
+;(trace interact)
+;(trace convert)
+;(trace U-check)
+
+;(trace val-of-closure)
+;(trace subtype-convert)
+;(trace α-subtype-aux)
+
+;(trace α-equiv?)
+;(trace α-equiv-aux)
+;(trace subtype?)
+;(trace α-subtype-aux)
+;(trace val)
+;(trace greater-Nat)
+;(trace subtype-convert)
+;(trace read-back-norm)
+;(run-program `() `((the (U (add1 (add1 zero))) (U zero))))
+;(run-program `() `((the (U (add1 (add1 zero))) (U (add1 zero)))))
+;(run-program `() `((the (Pi ((x Absurd)) (Pi ((y (U (add1 zero)))) y)) (lambda (x) (lambda (y) (ind-Absurd x y))))))
+;(run-program `() `((define fn (the (Pi ((x Nat)) (Pi ((y (U (add1 zero)))) y)) (lambda (x) (lambda (y) Nat)))))) example of whats not allowed
+
+;important notes:
+;You can't write a proof for types like (Pi ((y (U (add1 zero)))) y), since y could be a (U zero), meaning that every statement can be proven
+
+;(run-program `() `((define fn (the (Pi ((n (U (add1 (add1 zero))))) (U (add1 zero))) (lambda (x) Nat))) (fn (the (U (add1 (add1 zero))) (U (add1 zero))))))
+
+;(run-program `() `((the (Sigma ((n (U (add1 (add1 zero))))) (U (add1 zero))) (cons (U zero) (U zero)))))
+;(run-program `() `((the (Pi ((x Nat)) (U (add1 (add1 x)))) (lambda (x) (U (add1 x))))))
+
+
+
+;(run-program `() `((the (U (add1 (add1 zero)))
+;                        (ind-Nat
+;                                 (the Nat (add1 zero))
+;                                 (the (Pi ((n Nat)) (U (add1 (add1 n)))) (lambda (x) (U (add1 x))))
+;                                 (the (U (add1 zero)) (U zero))
+;                                 (the (Pi ((n Nat)) (Pi ((k (U (add1 n)))) (U (add1 (add1 n))))) (lambda (x) (lambda (y) (U (add1 x)))))))))
+
+;(run-program `() `((define fn (the (Pi ((n Nat)) (U (add1 n)))
+;                        (lambda(n)(ind-Nat
+;                                 (the Nat n)
+;                                 (the (Pi ((n Nat)) (U (add1 (add1 n))))
+;                                      (lambda (x) (U (add1 x))))
+;                                 (the (U (add1 zero))
+;                                      (U zero))
+;                                 (the (Pi ((n Nat)) (Pi ((k (U (add1 n)))) (U (add1 (add1 n)))))
+;                                      (lambda (x) (lambda (y) (U (add1 x)))))))))
+;                   (fn (the Nat (add1 zero)))))
+
+;(run-program `() `((define fn (the (Pi ((n Nat)) (ind-Nat
+;                                 (the Nat (add1 n))
+;                                (the (Pi ((n Nat)) (U (add1 (add1 n))))
+;                                      (lambda (x) (U (add1 x))))
+;                                 (the (U (add1 zero))
+;                                      (U zero))
+ ;                                (the (Pi ((n Nat)) (Pi ((k (U (add1 n)))) (U (add1 (add1 n)))))
+ ;                                     (lambda (x) (lambda (y) (U (add1 x)))))))
+;                        (lambda(n)(ind-Nat
+;                                 (the Nat n)
+;                                 (the (Pi ((n Nat)) (U (add1 (add1 n))))
+;                                      (lambda (x) (U (add1 x))))
+;                                 (the (U (add1 zero))
+;                                      (U zero))
+;                                 (the (Pi ((n Nat)) (Pi ((k (U (add1 n)))) (U (add1 (add1 n)))))
+;                                      (lambda (x) (lambda (y) (U (add1 x)))))))))
+;                   (fn (the Nat (add1 zero)))
+;                   ))
+                                      ;(lambda (x) (lambda (y) (U (add1 x)))))))))))
+
+;(run-program `() `((the (Pi ((n Nat)) (Pi ((y (U n))) Nat)) (lambda(x)(lambda(y) zero)))))
+
+;(go '(the (Π ((n Nat)) (U (add1 (add1 n)))) (λ (x) (U (add1 x)))))
+
+;(run-program `() `((define work (the (Pi ((x (List Nat))) (Pi ((pri (Σ ((x Nat)) Nat))) Nat))
+;                                       (lambda (x) (lambda (y) (ind-List
+;                                                                x
+;                                               (the (Pi ((n (List Nat))) (U zero)) (lambda (n) Nat))
+;                                               (car y)
+;                                               (the (Pi ((a Nat)) (Pi ((b (List Nat))) (Pi ((c Nat)) Nat))) (lambda (t) (lambda (h) (lambda (v) v )))))))))
+;                       ((work (:: zero (:: zero nil))) (cons (add1 zero) zero))))
+
+
+;(run-program `() `((define fn (the (Pi ((n Nat)) (Pi ((t (List (U (add1 n))))) (U (add1 n))))
+;                                   (lambda(x)
+;                                     (lambda (y)
+;                                       (ind-List y
+;                                                 (the (Pi ((t (List (U (add1 x))))) (U (add1 (add1 x)))) (lambda(g) (U (add1 x))))
+;                                                 (the (U (add1 x)) (U x))
+;                                                 (the (Pi ((k (U (add1 x)))) (Pi ((es (List (U (add1 x))))) (Pi ((lt (U (add1 x)))) (U (add1 x)))))
+;                                                      (lambda(gh) (lambda(pr) (lambda(ald) gh)))))))))
+;                   ((fn (the Nat (add1 (add1 (add1 zero))))) (the (List (U (add1 (add1 (add1 (add1 zero)))))) (:: (U (add1 (add1 (add1 zero)))) (:: (U zero) nil))))))
+
+;(run-program `() `((define fn (the (Pi ((n Nat)) (Pi ((k Nat)) (Pi ((vk (Vec (U (add1 n)) k))) (U (add1 n)))))
+;                                   (lambda(x)
+;                                     (lambda(y)
+ ;                                      (lambda(z)
+;                                         (ind-Vec y
+;                                                  z
+;                                                  (the (Pi ((at Nat)) (Pi (( gs (Vec (U (add1 x)) at))) (U (add1 (add1 x)))))
+;                                                       (lambda(gp) (lambda(almst) (U (add1 x)))))
+;                                                  (the (U (add1 x)) (U x))
+ ;                                                 (the (Pi ((tu Nat)) (Pi ((tf (U (add1 x))))
+;                                                                          (Pi ((sn (Vec (U (add1 x)) tu))) (Pi ((vpr (U (add1 x)))) (U (add1 x))))))
+;                                                       (lambda(dfd)
+;                                                         (lambda(dfje)
+;                                                           (lambda(rehd)
+;                                                             (lambda(redd)
+;                                                               dfje)))))))))))
+;                   (((fn (the Nat (add1 zero))) (the Nat (add1 zero))) (the (Vec (U (add1 (add1 zero))) (add1 zero)) (vec:: (U zero) vecnil)))))
+                                                       
+                                                  
