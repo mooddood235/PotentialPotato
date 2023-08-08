@@ -203,7 +203,7 @@
         'infty))
 
 (define a-matchables
-  (list 'zero 'Nat 'Atom 'List 'Vec 'nil 'vecnil))
+  (list 'zero 'Nat 'Atom 'List 'Vec 'nil 'vecnil 'U))
 
 ; x : keyword?
 (define (keyword? x)
@@ -978,6 +978,7 @@
                                                            [(ADD1 n) n]
                                                            [n n]))]
                           [else entry-type])])]
+    [`(U ,n) (NAT)]
     [n type-in]))
 
 (define (arbitraries-to-fresh arbitraries Γ)
@@ -1091,8 +1092,8 @@
             [e-out (check Γ expr (val (ctx->env Γ) ty))])
         (go `(the ,ty ,e-out)))]
     [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
-     (go-on ([type-in-out (check Γ type-in (UNI))]
-             [type-out-out (check Γ type-out (UNI))]
+     (go-on ([type-in-out (check Γ type-in (UNI (INFTY)))]
+             [type-out-out (check Γ type-out (UNI (INFTY)))]
              [expr-out (check Γ expr (val (ctx->env Γ) type-in-out))]
              [cases-out
               (check-cases Γ (val (ctx->env Γ) type-in-out) (val (ctx->env Γ) type-out-out)
