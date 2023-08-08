@@ -2,6 +2,20 @@
 
 Potential Potato is a dependantly typed programming language based on [Pie](https://github.com/the-little-typer/pie). It extends [Pie](https://github.com/the-little-typer/pie) with [pattern matching](https://en.wikipedia.org/wiki/Pattern_matching), [recursive functions](https://en.wikipedia.org/wiki/Recursion_(computer_science)), and a universe hierarchy.
 
+# Type checking 
+Type checking is done using [bidirection type checking](https://ncatlab.org/nlab/show/bidirectional+typechecking). Bidirectional type checking is a type checking strategy in which an expression `e` can be determined to be of type `E` through a combination of checking and synthesis operations. 
+
+$e \implies E$ means we can sythensize the type $E$ given $e$. 
+
+$e \impliedby E$ means the check that $e$ is of type $E$ is successful.
+
+$\frac{\Gamma,x:A \vdash M \Leftarrow B}{\Gamma\vdash (\lambda x.M) \Leftarrow (A\to B)}$ tells us that if $x$ is of type $A$, and the check that $M$ is of type $B$ is successful, then checking that $(\lambda (x) M)$ is a function that takes an $A$ and returns a $B$ will be successful. 
+
+$\frac{\Gamma\vdash f \Rightarrow (A\to B) \qquad \Gamma\vdash a \Leftarrow A }{\Gamma \vdash f(a) \Rightarrow B}$ tells us that if $f$ sythesizes to a function that takes an $A$ and returns a $B$, and checking that $a$ is an $A$ is successful, then synthesizing $f$ applied to $a$ gives a $B$. 
+
+# Normalization
+Expression normalization in Potential Potato is done using [normalization by evaliation](https://en.wikipedia.org/wiki/Normalisation_by_evaluation)
+
 # Pattern Matching
 ```racket
 (match E-in E-out e
