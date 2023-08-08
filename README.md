@@ -14,7 +14,12 @@ $\frac{\Gamma,x:A \vdash M \Leftarrow B}{\Gamma\vdash (\lambda x.M) \Leftarrow (
 $\frac{\Gamma\vdash f \Rightarrow (A\to B) \qquad \Gamma\vdash a \Leftarrow A }{\Gamma \vdash f(a) \Rightarrow B}$ tells us that if $f$ sythesizes to a function that takes an $A$ and returns a $B$, and checking that $a$ is an $A$ is successful, then synthesizing $f$ applied to $a$ gives a $B$. 
 
 # Normalization
-Expression normalization in Potential Potato is done using [normalization by evaliation](https://en.wikipedia.org/wiki/Normalisation_by_evaluation)
+Expression normalization in Potential Potato is done using [normalization by evaluation](https://en.wikipedia.org/wiki/Normalisation_by_evaluation). Potential Potato evaluates expressions into meta-level data structures (in our case Racket structures). They can be converted back into Potential Potato syntax using a read-back function. Normalization is done through a combination of evaluation and reading back. For example, to normalize a lambda function, it is evaluated into a `Closure` structure, which contains the body of the function, along with current environment extended with the function's argument. The function can be normalized by reading back:
+
+1. Take the argument that is in the enviromnent `x` and put `λ (x)` on the top.
+2. Evaluated the body of the lambda function, then read the body back.
+
+The result is the normalized lambda expression.
 
 # Pattern Matching
 ```racket
