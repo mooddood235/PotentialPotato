@@ -9,9 +9,9 @@ $e \implies E$ means we can sythensize the type $E$ given $e$.
 
 $e \impliedby E$ means the check that $e$ is of type $E$ is successful.
 
-$\frac{\Gamma,x:A \vdash M \Leftarrow B}{\Gamma\vdash (\lambda x.M) \Leftarrow (A\to B)}$ tells us that if $x$ is of type $A$, and the check that $M$ is of type $B$ is successful, then checking that $(\lambda (x) M)$ is a function that takes an $A$ and returns a $B$ will be successful. 
+$\dfrac{\Gamma,x:A \vdash M \Leftarrow B}{\Gamma\vdash (\lambda x.M) \Leftarrow (A\to B)}$ tells us that if $x$ is of type $A$, and the check that $M$ is of type $B$ is successful, then checking that $(\lambda (x) M)$ is a function that takes an $A$ and returns a $B$ will be successful. 
 
-$\frac{\Gamma\vdash f \Rightarrow (A\to B) \qquad \Gamma\vdash a \Leftarrow A }{\Gamma \vdash f(a) \Rightarrow B}$ tells us that if $f$ sythesizes to a function that takes an $A$ and returns a $B$, and checking that $a$ is an $A$ is successful, then synthesizing $f$ applied to $a$ gives a $B$. 
+$\dfrac{\Gamma\vdash f \Rightarrow (A\to B) \qquad \Gamma\vdash a \Leftarrow A }{\Gamma \vdash f(a) \Rightarrow B}$ tells us that if $f$ sythesizes to a function that takes an $A$ and returns a $B$, and checking that $a$ is an $A$ is successful, then synthesizing $f$ applied to $a$ gives a $B$. 
 
 # Normalization
 Expression normalization in Potential Potato is done using [normalization by evaluation](https://en.wikipedia.org/wiki/Normalisation_by_evaluation). Potential Potato evaluates expressions into meta-level data structures (in our case Racket structures). They can be converted back into Potential Potato syntax using a read-back function. Normalization is done through a combination of evaluation and reading back. For example, to normalize a lambda function, it is evaluated into a `Closure` structure, which contains the body of the function, along with current environment extended with the function's argument. The function can be normalized by reading back:
