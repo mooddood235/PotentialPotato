@@ -77,7 +77,7 @@ $\dfrac{\Gamma \vdash n \in \mathbb{Nat} \leadsto n^{\circ}}{\Gamma \vdash \ (U 
 
 $\dfrac{\Gamma \vdash expr \in (U n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ expr \in (U \ infty) \ \leadsto \ expr^{\circ}}$ Which says that $(U n)$ is a subtype of $(U infty)$. It is also the case that $(U n) \in (U \infty)$.
 
-This subtyping behavior also extends to functions and other objects, 
+This subtyping behavior also extends to functions and other similar objects like Pair, 
 
 $\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ \leadsto \ s$
 
@@ -87,6 +87,7 @@ $\Gamma \vdash A \subset D \ \leadsto \ A^{\circ} $
 
 $\dfrac{\Gamma , a: \ A \ m: \ D \ \vdash B \subset K \leadsto B^{\circ}} {\ p \in (\Pi \ ((m \ D)) \ K) \ \leadsto \ p^{\circ}}$
 Consider the following code:
+
 ```racket
 example 2
 ```
