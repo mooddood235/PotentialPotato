@@ -66,6 +66,7 @@ Let `m` be the expression being matched. For every match case, the pattern is a 
 
 # Type Subsumption
 The main rules for type subsumption are:
+
 $\dfrac{\Gamma \vdash n \in \mathbb{Nat} \leadsto n^{\circ}}{\Gamma \vdash (U\ n)\ type \ \leadsto (U\ n^{\circ})}$, which adds the type (U n) where n is a Nat.
 
 $\dfrac{\Gamma \vdash expr \in (U n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ Which says that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$.
@@ -73,6 +74,19 @@ $\dfrac{\Gamma \vdash expr \in (U n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash ex
 $\dfrac{\Gamma \vdash n \in \mathbb{Nat} \leadsto n^{\circ}}{\Gamma \vdash \ (U \ n) \in (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ This says that the type of $(U \ n) $is a $(U \ (add1 \ n))$ aswell. So its both a subtype and an element of $(U \ (add1 \ n))$.
 
 $\dfrac{\Gamma \vdash expr \in (U n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ expr \in (U \ infty) \ \leadsto \ expr^{\circ}}$ Which says that $(U n)$ is a subtype of $(U infty)$. It is also the case that $(U n) \in (U \infty)$.
+
+Functions such as ind-List have also been modified to facilitate for these higher types:
+
+\[
+\frac{
+    \begin{aligned}
+        hello \\
+        world
+    \end{aligned}
+}{
+    45
+}
+\]
 
 Note: $infty$ is an expressions that is used for checking types and expressions when running code, but it cannot be explicitly used when writing in PotentialPotato.
 
