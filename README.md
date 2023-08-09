@@ -79,10 +79,9 @@ Functions such as ind-List have also been modified to facilitate for these highe
 
 
 $\frac{
-    \begin{aligned}
-        hello \\
+   hello \\
         world
-    \end{aligned}
+
 }{
     45
 }$
