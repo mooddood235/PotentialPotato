@@ -71,14 +71,12 @@ $\dfrac{\Gamma \vdash n \in \mathbb{Nat} \leadsto n^{\circ}}{\Gamma \vdash (U\ n
 
 $\dfrac{\Gamma \vdash expr \in (U n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ Which says that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$.
 
-$\dfrac{\Gamma \vdash n \in \mathbb{Nat} \leadsto n^{\circ}}{\Gamma \vdash \ (U \ n) \in (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ This says that the type of $(U \ n) $is a $(U \ (add1 \ n))$ aswell. So its both a subtype and an element of $(U \ (add1 \ n))$.
+$\dfrac{\Gamma \vdash n \in \mathbb{Nat} \leadsto n^{\circ}}{\Gamma \vdash \ (U \ n) \in (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ This says that the type of $(U \ n)$ is a $(U \ (add1 \ n))$ aswell. So its both a subtype and an element of $(U \ (add1 \ n))$.
 
 $\dfrac{\Gamma \vdash expr \in (U n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ expr \in (U \ infty) \ \leadsto \ expr^{\circ}}$ Which says that $(U n)$ is a subtype of $(U infty)$. It is also the case that $(U n) \in (U \infty)$.
 
-Functions such as ind-List have also been modified to facilitate for these higher types:
-
-
-$\frac{\text{hello world}}{45}$
+Functions such as ind-List have also been modified to facilitate for these higher types, this means that for a motive $m$ it must be the case that 
+$m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$.
 
 Note: $infty$ is an expressions that is used for checking types and expressions when running code, but it cannot be explicitly used when writing in PotentialPotato.
 
