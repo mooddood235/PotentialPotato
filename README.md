@@ -64,5 +64,8 @@ Is a recursive function that computes the `n`'th member of the Fibonacci sequenc
 Gauranteeing Termination:
 Let `m` be the expression being matched. For every match case, the pattern is a more informative version of `m`. This means a strict sub-expression of the pattern is a strict sub-expression of `m`. Potential Potato restricts the last argument of every recursive call to be a strict sub-expression of the pattern. Hence, the last argument of every recursive call is a strict sub-expression of `m`. Since the last argument of every recursive function is what will be matched, we know that every recursive call is matching an expression that is a strict sub-expression of whatever the parent call was matching. Since every recursive call is matching a strictly smaller expression, and these exists an "else" case that always matches, the recursive function must terminate.
 
+# Type Subsumption
+$\frac{\Gamma \vdash n \in \mathbb{N} \leadsto n}{\Gamma\vdash (\lambda x.M) \Leftarrow (A\to B)}$
+
 # Code Base Structure
 Logical constructs such as evaluation, synthesis, sugaring/desugaring, etc. can be found in their own racket files. For example, desugaring can be found in `desugar.rkt`.
