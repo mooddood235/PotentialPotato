@@ -79,7 +79,7 @@ $\dfrac{\Gamma \vdash expr \in (U n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ 
 
 This subtyping behavior also extends to functions and other similar objects like Pair, 
 
-$\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ \leadsto \ s$
+$\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ type \ \leadsto \ s$
 
 $\Gamma \vdash \ p \in (\Pi \ ((n \ A)) \ B) \ \leadsto \ p^{\circ}$
 
