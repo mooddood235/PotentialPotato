@@ -1037,24 +1037,21 @@
     [`(= ,A ,from ,to)
      (go-on ([`(the ,A-t ,A-temp) (synth Γ A)]
              [`(U ,n) (U-check Γ A-t)]
-             [A-out (check A-temp (UNI (val (ctx->env Γ) n) ))]
              [A-val (go (val (ctx->env Γ) A))]
              [from-out (check Γ from A-val)]
              [to-out (check Γ to A-val)])
-       (go `(the (U ,n) (= ,A-out ,from-out ,to-out))))]
+       (go `(the (U ,n) (= ,A-temp ,from-out ,to-out))))]
     [`(replace ,target ,motive ,base)
      (go-on ([`(the ,target-t ,target-out) (synth Γ target)])
        (match (val (ctx->env Γ) target-t)
          [(EQ A from to)
-          (go-on ([`(,(or 'Π 'Pi) ((,k ,S)) ,M) (synth Γ motive)]
-                  [`(U ,n) (U-check Γ M)]
-                  [motive-out
+          (go-on ([motive-out
                    (check Γ
                           motive
-                          (PI A (H-O-CLOS 'x (lambda (x) (UNI (val (ctx->env Γ) n))))))]
+                          (PI A (H-O-CLOS 'x (lambda (x) (UNI (INFTY))))))]
                   [motive-v (go (val (ctx->env Γ) motive-out))]
                   [base-out (check Γ base (do-ap motive-v from))])
-            (go `(the ,(read-back-norm Γ (THE (UNI (val (ctx->env Γ) n)) (do-ap motive-v to)))
+            (go `(the ,(read-back-norm Γ (THE (UNI (INFTY)) (do-ap motive-v to)))
                       (replace ,target-out ,motive-out ,base-out))))]
          [non-EQ
           (stop target (format "Expected =, but type is ~a" non-EQ))]))]
@@ -1074,9 +1071,7 @@
     ['Absurd (go '(the (U zero) Absurd))]
     [`(ind-Absurd ,target ,motive)
      (go-on ([target-out (check Γ target (ABSURD))]
-             [`(the ,A ,B) (synth Γ motive)]
-             [`(U ,n) (U-check Γ A)]
-             [motive-out (check Γ motive (UNI (val (ctx->env Γ) n)))])
+             [motive-out (check Γ motive (UNI (INFTY)))])
        (go `(the ,motive-out (ind-Absurd ,target-out ,motive-out))))]
     ['Atom (go '(the (U zero) Atom))]
     [`(,rator ,rand)
@@ -1327,5 +1322,5 @@
 
 ; -----------------------------------------------------------
 
-
+(provide (all-defined-out))
                                                   
