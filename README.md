@@ -65,6 +65,8 @@ Gauranteeing Termination:
 Let `m` be the expression being matched. For every match case, the pattern is a more informative version of `m`. This means a strict sub-expression of the pattern is a strict sub-expression of `m`. Potential Potato restricts the last argument of every recursive call to be a strict sub-expression of the pattern. Hence, the last argument of every recursive call is a strict sub-expression of `m`. Since the last argument of every recursive function is what will be matched, we know that every recursive call is matching an expression that is a strict sub-expression of whatever the parent call was matching. Since every recursive call is matching a strictly smaller expression, and these exists an "else" case that always matches, the recursive function must terminate.
 
 # Type Subsumption
+
+$(U \ zero)$ takes the place of $U$ in Pie.
 The main rules for type subsumption are:
 
 $\dfrac{\Gamma \vdash n \in \mathbb{Nat} \leadsto n^{\circ}}{\Gamma \vdash (U\ n)\ type \ \leadsto (U\ n^{\circ})}$, which adds the type (U n) where n is a Nat.
@@ -76,7 +78,7 @@ $\dfrac{\Gamma \vdash n \in \mathbb{Nat} \leadsto n^{\circ}}{\Gamma \vdash \ (U 
 $\dfrac{\Gamma \vdash expr \in (U n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ expr \in (U \ infty) \ \leadsto \ expr^{\circ}}$ Which says that $(U n)$ is a subtype of $(U infty)$. It is also the case that $(U n) \in (U \infty)$.
 
 Functions such as ind-List have also been modified to facilitate for these higher types, this means that for a motive $m$ it must be the case that 
-$m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$.
+$m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so $(U zero)$ (which replaces U in Pie) is replaced with $(U \ infty)$ in this language.
 
 Note: $infty$ is an expressions that is used for checking types and expressions when running code, but it cannot be explicitly used when writing in PotentialPotato.
 
