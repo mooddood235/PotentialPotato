@@ -78,7 +78,7 @@ $\dfrac{\Gamma \vdash expr \in (U n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ 
 Functions such as ind-List have also been modified to facilitate for these higher types:
 
 
-$\frac{\text{hello} \\ \text{world}}{45}$
+$\frac{\text{hello world}}{45}$
 
 Note: $infty$ is an expressions that is used for checking types and expressions when running code, but it cannot be explicitly used when writing in PotentialPotato.
 
