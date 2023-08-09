@@ -69,7 +69,7 @@ Let `m` be the expression being matched. For every match case, the pattern is a 
 $(U \ zero)$ takes the place of $U$ in Pie.
 The main rules for type subsumption are:
 
-$\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash (U \ n)\ type \ \leadsto (U \ n^{\circ})}$, which adds the type (U \ n) where n is a Nat.
+$\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash (U \ n)\ type \ \leadsto (U \ n^{\circ})}$, which adds the type $(U \ n)$ where $n$ is a Nat.
 
 $\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ Which says that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$.
 
