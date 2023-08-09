@@ -31,37 +31,6 @@
       (freshen used (add-* x))
       x))
 
-(define (norm ρ e)
-  (read-back '() (val ρ e)))
-
-; e : expression?
-(define (with-numerals e)
-  `((define church-zero
-      (λ (f)
-        (λ (x)
-          x)))
-    (define church-add1
-      (λ (n-1)
-        (λ (f)
-          (λ (x)
-            (f ((n-1 f) x))))))
-    ,e))
-
-; n : exact-nonnegative-integer?
-(define (to-church n)
-  (cond [(zero? n) 'church-zero]
-        [(positive? n)
-         (let ([church-of-n-1 (to-church (sub1 n))])
-           `(church-add1 ,church-of-n-1))]))
-
-(define church-add
-  `(λ (j)
-     (λ (k)
-       (λ (f)
-         (λ (x)
-           ((j f) ((k f) x)))))))
-
-
 ; result : any/c
 (struct go (result) #:transparent)
 
@@ -82,35 +51,6 @@
          [(go v) (error 'go-on "Pattern did not match value ~v" v)]
          [(stop expr msg) (stop expr msg)]))]))
 
-; t1 : any/c
-; t2 : any/c
-(define (type=? t1 t2)
-  (match* (t1 t2)
-    [('Nat 'Nat) #t]
-    [(`(→ ,A1 ,B1) `(→ ,A2 ,B2))
-     (and (type=? A1 A2) (type=? B1 B2))]
-    [(_ _) #f]))
-
-; t : any/c
-(define (type? t)
-  (type=? t t))
-
-; Γ : context?
-; prog : (listof (or/c expression? (list/c 'define symbol? expression?)))
-(define (check-program Γ prog)
-  (match prog
-    ['()
-     (go Γ)]
-    [(cons `(define ,x ,e) rest)
-     (go-on ([t (synth Γ e)])
-       (check-program (extend Γ x t) rest))]
-    [(cons e rest)
-     (go-on ([t (synth Γ e)])
-       (begin
-         (printf "~a has type ~a\n" e t)
-         (check-program Γ rest)))]))
-
-
 
 (struct ZERO () #:transparent)
 
@@ -118,65 +58,6 @@
 
 ; pred : value
 (struct ADD1 (pred) #:transparent)
-
-
-; type : type?
-; target : neutral?
-; base : norm?
-; step : norm?
-(struct	N-rec (type target base step) #:transparent)
-
-; v : any/c
-(define (norm? v) (THE? v))
-
-; type : type?
-; target : value?
-; base : value?
-; step : value?
-(define (do-rec type target base step)
-  (match target
-    [(ZERO) base]
-    [(ADD1 n)
-     (do-ap (do-ap step n)
-            (do-rec type n base step))]
-    [(NEU 'Nat ne)
-     (NEU type
-          (N-rec type
-                 ne
-                 (THE type base)
-                 (THE `(→ Nat (→ ,type ,type)) step)))]))
-
-; used-names : (listof symbol?)
-; type : type?
-; value : value?
-(define (read-back used-names type value)
-  (match type
-    ['Nat
-     (match value
-       [(ZERO) 'zero]
-       [(ADD1 n) `(add1 ,(read-back used-names 'Nat n))]
-       [(NEU _ ne)
-        (read-back-neutral used-names ne)])]
-    [`(→ ,A ,B)
-     (let ([x (freshen used-names 'x)])
-       `(λ (,x)
-          ,(read-back (cons x used-names)
-                      B
-                      (do-ap value (NEU A (N-var x))))))]))
-
-; Δ : definitions?
-(define (defs->ctx Δ)
-  (match Δ
-    ['() '()]
-    [(cons (cons x (def type _)) rest)
-     (extend (defs->ctx rest) x type)]))
-
-; Δ : definitions?
-(define (defs->env Δ)
-  (match Δ
-    ['() '()]
-    [(cons (cons x (def _ value)) rest)
-     (extend (defs->env rest) x value)]))
 
 (define keywords
   (list 'define
@@ -329,11 +210,6 @@
     [(_ _) #f]))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (greater-Nat-t A B)
-  (match* (A B)
-    [(`(add1 ,n ) `(add1 ,k ))  `(greater-Nat k n)]
-    [(`zero `(add1 ,k)) #f]
-    [(`(add1 ,k) zero) #t]))
 
 ; domain : value?
 ; range : closure?
@@ -385,10 +261,6 @@
 ; x : symbol?
 ; fun : (-> value ? value?)
 (struct H-O-CLOS (x fun) #:transparent)
-
-; c : any/c
-(define (closure? c)
-  (or (CLOS? c) (H-O-CLOS? c)))
 
 ; c : closure?
 (define (closure-name c)
@@ -448,14 +320,6 @@
 
 ; type : value?
 (struct bind (type) #:transparent)
-
-; Γ : any/c
-(define (context? Γ)
-  (match Γ
-    ['() #t]
-    [(cons (cons x b) rest)
-     (and (symbol? x) (or (def? b) (bind? b)) (context? rest))]
-    [_ #f]))
 
 ; x : symbol?
 ; Γ : context?
