@@ -65,7 +65,7 @@ Gauranteeing Termination:
 Let `m` be the expression being matched. For every match case, the pattern is a more informative version of `m`. This means a strict sub-expression of the pattern is a strict sub-expression of `m`. Potential Potato restricts the last argument of every recursive call to be a strict sub-expression of the pattern. Hence, the last argument of every recursive call is a strict sub-expression of `m`. Since the last argument of every recursive function is what will be matched, we know that every recursive call is matching an expression that is a strict sub-expression of whatever the parent call was matching. Since every recursive call is matching a strictly smaller expression, and these exists an "else" case that always matches, the recursive function must terminate.
 
 # Type Subsumption
-$\dfrac{\Gamma \vdash n \in \mathbb{N} \leadsto n^{\circ}}{\Gamma \vdash (U n) type  \leadsto (U n^{\circ})}$ 
+$\dfrac{\Gamma \vdash n \in \mathbb{N} \leadsto n^{\circ}}{\Gamma \vdash (U\ n)\ type \ \leadsto (U\ n^{\circ})}$ 
 
 # Code Base Structure
 Logical constructs such as evaluation, synthesis, sugaring/desugaring, etc. can be found in their own racket files. For example, desugaring can be found in `desugar.rkt`.
