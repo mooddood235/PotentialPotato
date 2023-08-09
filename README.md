@@ -86,7 +86,8 @@ $\Gamma \vdash \ p \in (\Pi \ ((n \ A)) \ B) \ \leadsto \ p^{\circ}$
 $\Gamma \vdash A \subset D \ \leadsto \ A^{\circ} $
 
 $\dfrac{\Gamma , a: \ A \ m: \ D \ \vdash B \subset K \leadsto B^{\circ}} {\ p \in (\Pi \ ((m \ D)) \ K) \ \leadsto \ p^{\circ}}$
-Consider the following code:
+
+Consider the following code to highlight this point:
 
 ```racket
 example 2
