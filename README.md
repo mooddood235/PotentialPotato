@@ -80,7 +80,7 @@ $\dfrac{\Gamma \vdash expr \in (U n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ 
 Functions such as ind-List have also been modified to facilitate for these higher types, this means that for a motive $m$ it must be the case that 
 $m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so $(U zero)$ (which replaces U in Pie) is replaced with $(U \ infty)$ in this language.
 
-Note: $infty$ is an expressions that is used for checking types and expressions when running code, but it cannot be explicitly used when writing in PotentialPotato.
+Note: $infty$ is an expressions that is used for checking types and expressions when running code, but it should not be used when writing in PotentialPotato.
 
 # Code Base Structure
 Logical constructs such as evaluation, synthesis, sugaring/desugaring, etc. can be found in their own racket files. For example, desugaring can be found in `desugar.rkt`.
