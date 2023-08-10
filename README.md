@@ -97,6 +97,7 @@ Consider the following code to highlight this point:
 (fn (add1 zero) subfunc)
 ```
 Notice that `fk` is a `(Pi ((t Nat)) (U (add1 (add1 t))))` yet we are able to pass in the function `subfunc` of type 
+
 `(Pi ((v Nat)) (U (add1 v)))`
 
 Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive $m$ it must be the case that 
