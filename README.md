@@ -90,7 +90,9 @@ $\dfrac{\Gamma , a: \ A \ m: \ D \ \vdash B \subset K \leadsto B^{\circ}} {\ p \
 Consider the following code to highlight this point:
 
 ```racket
-example 2
+(run-program `() `((define fn (the (Pi ((n Nat) (fk (Pi ((t Nat)) (U (add1 (add1 t)))))) (U (add1 (add1 n)))) (lambda(m s) (s m))))
+                   (define subfunc (the (Pi ((v Nat)) (U (add1 v))) (lambda(g) (U g))))
+                   (fn (add1 zero) subfunc)))
 ```
 
 Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive $m$ it must be the case that 
