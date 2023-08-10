@@ -96,6 +96,7 @@ Consider the following code to highlight this point:
                      (lambda(g) (U g))))
 (fn (add1 zero) subfunc)
 ```
+Notice that `fk` is a `(Pi ((t Nat)) (U (add1 (add1 t))))` yet we are able to pass in the function `subfunc` of type `(Pi ((v Nat)) (U (add1 v)))`
 
 Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive $m$ it must be the case that 
 $m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Consider the following code:
