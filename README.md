@@ -71,9 +71,9 @@ The main rules for type subsumption are:
 
 $\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash (U \ n)\ type \ \leadsto (U \ n^{\circ})}$, The type $(U \ n)$ is introduced where $n$ is a Nat.
 
-$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ This indicates that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$, in the following statements, the symbol $\subset$ will be used for subtype.
+$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ This indicates that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$. Later on the symbol $\subset$ will be used for subtype.
 
-$\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash \ (U \ n) \in (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ This says that $(U \ n)$ typchecks as a $(U \ (add1 \ n))$. So its both a subtype and an element of $(U \ (add1 \ n))$.
+$\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash \ (U \ n) \in (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ This says that $(U \ n)$ typchecks as a $(U \ (add1 \ n))$. So its not only a subtype but also an element of $(U \ (add1 \ n))$.
 
 $\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ expr \in (U \ infty) \ \leadsto \ expr^{\circ}}$ Which says that $(U n)$ is a subtype of $(U \ infty)$. It is also the case that $(U \ n) \in (U \ infty)$ for any Nat $n$.
 
