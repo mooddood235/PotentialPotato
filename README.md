@@ -64,7 +64,7 @@ Is a recursive function that computes the `n`'th member of the Fibonacci sequenc
 Gauranteeing Termination:
 Let `m` be the expression being matched. For every match case, the pattern is a more informative version of `m`. This means a strict sub-expression of the pattern is a strict sub-expression of `m`. Potential Potato restricts the last argument of every recursive call to be a strict sub-expression of the pattern. Hence, the last argument of every recursive call is a strict sub-expression of `m`. Since the last argument of every recursive function is what will be matched, we know that every recursive call is matching an expression that is a strict sub-expression of whatever the parent call was matching. Since every recursive call is matching a strictly smaller expression, and these exists an "else" case that always matches, the recursive function must terminate.
 
-# Type Subsumption
+# Universe Heirarchy
 
 $(U \ zero)$ takes the place of $U$ in Pie.
 The main rules for type subsumption are:
@@ -77,6 +77,7 @@ $\dfrac{\Gamma \vdash n \in \mathbb{Nat} \leadsto n^{\circ}}{\Gamma \vdash \ (U 
 
 $\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ expr \in (U \ infty) \ \leadsto \ expr^{\circ}}$ Which says that $(U n)$ is a subtype of $(U \ infty)$. It is also the case that $(U \ n) \in (U \ infty)$.
 
+# More on Subtyping
 This subtyping behavior also extends to functions and other similar objects like Pair, 
 
 $\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ type \ \leadsto \ s$
@@ -85,23 +86,45 @@ $\Gamma \vdash \ p \in (\Pi \ ((n \ A)) \ B) \ \leadsto \ p^{\circ}$
 
 $\Gamma \vdash A \subset D \ \leadsto \ A^{\circ} $
 
-$\dfrac{\Gamma , a: \ A \ m: \ D \ \vdash B \subset K \leadsto B^{\circ}} {\ p \in (\Pi \ ((m \ D)) \ K) \ \leadsto \ p^{\circ}}$
+$\dfrac{\Gamma,a:A ~ m:D \ \vdash B \subset K \leadsto B^{\circ}} {\ p \in (\Pi \ ((m \ D)) \ K) \ \leadsto \ p^{\circ}}$
 
 Consider the following code to highlight this point:
 
 ```racket
-example 2
+(define fn (the (Pi ((n Nat) (fk (Pi ((t Nat)) (U (add1 (add1 t)))))) (U (add1 (add1 n))))
+                (lambda(m s) (s m))))
+(define subfunc (the (Pi ((v Nat)) (U (add1 v)))
+                     (lambda(g) (U g))))
+(fn (add1 zero) subfunc)
 ```
+Notice that `fk` is a `(Pi ((t Nat)) (U (add1 (add1 t))))` yet we are able to pass in the function `subfunc` of type 
+
+`(Pi ((v Nat)) (U (add1 v)))`
 
 Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive $m$ it must be the case that 
-$m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Consider the following code:
-```racket
-example3
-```
+$m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Consider the following code with ind-Nat:
 
+```racket
+(define elevator (the (Pi ((n Nat) (k (U zero))) (U (add1 n)))
+                      (lambda(x z)
+                        (ind-Nat x
+                                 (the (Pi ((k Nat)) (U (add1 (add1 k)))) (lambda(t) (U (add1 t))))
+                                 z
+                                 (the (Pi ((p Nat) (almost (U (add1 p)))) (U (add1 (add1 p)))) (lambda(r b) b))))))
+```
+The above code addresses the issue that for a function such as `(Pi ((k Nat)) (U (add1 k)))`, one cannot return a `(U zero)` even though logically `(U zero)` should be a `(U (add1 t))` for any Nat value t. The subtyping rules prevent this since the rule (U n) $\subset$ (U (add1 n)) must be applied (potentially several times) in order to show subtyping, but k in the above type is arbitrary. The above code essentially leverages this more flexible motive in order to create a function which accepts a expression of type `(U zero)` and produces the same expression but with type `(U (add1 n))` for any Nat `n`.
 
 
 Note: $infty$ is an expressions that is used for checking types and expressions when running code, but it should not be used when writing in PotentialPotato.
 
 # Code Base Structure
 Logical constructs such as evaluation, synthesis, sugaring/desugaring, etc. can be found in their own racket files. For example, desugaring can be found in `desugar.rkt`.
+
+# Additional Components of Pie Added:
+- Vectors
+- ind-Vec
+- Lists
+- ind-List
+- Either
+- ind-Either
+- Currying
