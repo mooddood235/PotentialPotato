@@ -102,9 +102,15 @@ Notice that `fk` is a `(Pi ((t Nat)) (U (add1 (add1 t))))` yet we are able to pa
 `(Pi ((v Nat)) (U (add1 v)))`
 
 Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive $m$ it must be the case that 
-$m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Consider the following code:
+$m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Consider the following code with ind-Nat:
+
 ```racket
-example3
+(define elevator (the (Pi ((n Nat) (k (U zero))) (U (add1 n)))
+                      (lambda(x z)
+                        (ind-Nat x
+                                 (the (Pi ((k Nat)) (U (add1 (add1 k)))) (lambda(t) (U (add1 t))))
+                                 z
+                                 (the (Pi ((p Nat) (almost (U (add1 p)))) (U (add1 (add1 p)))) (lambda(r b) b))))))
 ```
 
 
