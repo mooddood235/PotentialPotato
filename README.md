@@ -95,13 +95,13 @@ The above rules specify that for one Pi expression to be a subtype of another, t
 Consider the following code to highlight this point:
 
 ```racket
-(define fn (the (Pi ((n Nat) (fk (Pi ((t Nat)) (U (add1 (add1 t)))))) (U (add1 (add1 n))))
+(define fn (the (Pi ((n Nat) (ft (Pi ((t Nat)) (U (add1 (add1 t)))))) (U (add1 (add1 n))))
                 (lambda(m s) (s m))))
 (define subfunc (the (Pi ((v Nat)) (U (add1 v)))
                      (lambda(g) (U g))))
 (fn (add1 zero) subfunc)
 ```
-Though `fk` is a `(Pi ((t Nat)) (U (add1 (add1 t))))` its still possible to pass in the function `subfunc` of type 
+Though `fn` requires a `(Pi ((t Nat)) (U (add1 (add1 t))))` to be passed in, its still possible to pass in the function `subfunc` of type 
 
 `(Pi ((v Nat)) (U (add1 v)))` Notice that after a consistent renaming of variables, (U (add1 v)) can be compared to (U (add1 (add1 t))) even though v and t are both neutral.
 
@@ -148,3 +148,4 @@ Universe hierarchy `UniverseUtils.rkt`
 - Either
 - ind-Either
 - Currying
+- -> can be used instead of Pi
