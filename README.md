@@ -120,11 +120,11 @@ Consider the following code with ind-Nat:
                                  (the (Pi ((p Nat) (almost (U (add1 p)))) (U (add1 (add1 p))))
                                       (lambda(r b) b))))))
 ```
-The above code addresses the issue that a function such as `(Pi ((k Nat)) (U (add1 k)))` cannot return a `(U zero)` even though logically `(U zero)` should be a `(U (add1 t))` for any Nat value t. 
+The above code addresses the fact that a function such as `(Pi ((k Nat)) (U (add1 k)))` is not allowed to return a `(U zero)` or anything which is a `(U zero)` directly even though logically `(U zero)` should be a `(U (add1 t))` for any Nat value t. 
 
-The subtyping rules prevent one from declaring that `(U zero)` $\subset$ `(U (add1 t))` because of course, its impossible for us to derive this by applying the rule (U n) $\subset$ (U (add1 n)) any number of times, since k in the expression (U (add1 k)) is neutral. 
+The subtyping rules prevent one from declaring that `(U zero)` $\subset$ `(U (add1 t))` because of course, its impossible for us to derive this by applying the rule (U n) $\subset$ (U (add1 n)) any number of times, since k in the expression (U (add1 k)) is neutral and cannot be evaluated further. 
 
-`elevator` essentially leverages this more flexible motive type in a clever way in order to create a function which accepts a expression of type `(U zero)` and returns the same expression but with type `(U (add1 n))` for any Nat `n`.
+The above code essentially leverages this more flexible motive type in a clever way in order to create a function which accepts a expression of type `(U zero)` and returns the same expression but with type `(U (add1 n))` for any Nat `n`.
 
 # Code Base Structure
 Evaluation and normalization: `Evaluation.rkt`
