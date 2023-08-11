@@ -69,13 +69,15 @@ Let `m` be the expression being matched. For every match case, the pattern is a 
 $(U \ zero)$ takes the place of $U$ in Pie.
 The main rules for type subsumption are:
 
-$\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash (U \ n)\ type \ \leadsto (U \ n^{\circ})}$, which adds the type $(U \ n)$ where $n$ is a Nat.
+$\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash (U \ n)\ type \ \leadsto (U \ n^{\circ})}$, The type $(U \ n)$ is introduced where $n$ is a Nat.
 
-$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ Which says that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$.
+$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ This indicates that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$, in the following statements, the symbol $\subset$ will be used for subtype.
 
-$\dfrac{\Gamma \vdash n \in \mathbb{Nat} \leadsto n^{\circ}}{\Gamma \vdash \ (U \ n) \in (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ This says that the type of $(U \ n)$ is a $(U \ (add1 \ n))$ aswell. So its both a subtype and an element of $(U \ (add1 \ n))$.
+$\dfrac{\Gamma \vdash n \in \mathbb{Nat} \leadsto n^{\circ}}{\Gamma \vdash \ (U \ n) \in (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ This says that $(U \ n)$ typchecks as a $(U \ (add1 \ n))$. So its both a subtype and an element of $(U \ (add1 \ n))$.
 
-$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ expr \in (U \ infty) \ \leadsto \ expr^{\circ}}$ Which says that $(U n)$ is a subtype of $(U \ infty)$. It is also the case that $(U \ n) \in (U \ infty)$.
+$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ expr \in (U \ infty) \ \leadsto \ expr^{\circ}}$ Which says that $(U n)$ is a subtype of $(U \ infty)$. It is also the case that $(U \ n) \in (U \ infty)$ for any Nat $n$.
+
+Note: $infty$ is a special Nat that is used for checking types and expressions when running code in the backend, but it should not be used when writing in PotentialPotato.
 
 # More on Subtyping
 This subtyping behavior also extends to functions and other similar objects like Pair, 
@@ -88,6 +90,8 @@ $\Gamma \vdash A \subset D \ \leadsto \ A^{\circ} $
 
 $\dfrac{\Gamma,a:A ~ m:D \ \vdash B \subset K \leadsto B^{\circ}} {\ p \in (\Pi \ ((m \ D)) \ K) \ \leadsto \ p^{\circ}}$
 
+The above rules specify that for one Pi expression to be a subtype of another, then their argument types and body types both have to be subtypes.
+
 Consider the following code to highlight this point:
 
 ```racket
@@ -99,7 +103,7 @@ Consider the following code to highlight this point:
 ```
 Notice that `fk` is a `(Pi ((t Nat)) (U (add1 (add1 t))))` yet we are able to pass in the function `subfunc` of type 
 
-`(Pi ((v Nat)) (U (add1 v)))`
+`(Pi ((v Nat)) (U (add1 v)))` Notice that after a consistent renaming of variables, (U (add1 v)) can be compared to (U (add1 (add1 t))) even though v and t are both neutral.
 
 Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive $m$ it must be the case that 
 $m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Consider the following code with ind-Nat:
@@ -114,10 +118,8 @@ $m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $
                                  (the (Pi ((p Nat) (almost (U (add1 p)))) (U (add1 (add1 p))))
                                       (lambda(r b) b))))))
 ```
-The above code addresses the issue that for a function such as `(Pi ((k Nat)) (U (add1 k)))`, one cannot return a `(U zero)` even though logically `(U zero)` should be a `(U (add1 t))` for any Nat value t. The subtyping rules prevent this since the rule (U n) $\subset$ (U (add1 n)) must be applied (potentially several times) in order to show subtyping, but k in the above type is arbitrary. The above code essentially leverages this more flexible motive in order to create a function which accepts a expression of type `(U zero)` and produces the same expression but with type `(U (add1 n))` for any Nat `n`.
-
-
-Note: $infty$ is an expressions that is used for checking types and expressions when running code, but it should not be used when writing in PotentialPotato.
+The above code is interesting because it addresses the issue that for a function such as `(Pi ((k Nat)) (U (add1 k)))`, one cannot return a `(U zero)` even though logically `(U zero)` should be a `(U (add1 t))` for any Nat value t. The subtyping rules prevent from declaring that `(U zero)` $\subset$ `(U (add1 t))` because of course, its impossible for us to derive this by applying the rule (U n) $\subset$ (U (add1 n)) any number of times, since k in (U (add1 k)) is arbitrary. 
+`elevator` essentially leverages this more flexible motive in order to create a function which accepts a expression of type `(U zero)` and produces the same expression but with type `(U (add1 n))` for any Nat `n`.
 
 # Code Base Structure
 Evaluation and normalization: `Evaluation.rkt`
