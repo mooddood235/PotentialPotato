@@ -120,8 +120,19 @@ The above code addresses the issue that for a function such as `(Pi ((k Nat)) (U
 Note: $infty$ is an expressions that is used for checking types and expressions when running code, but it should not be used when writing in PotentialPotato.
 
 # Code Base Structure
-Logical constructs such as evaluation, synthesis, sugaring/desugaring, etc. can be found in their own racket files. For example, desugaring can be found in `desugar.rkt`.
+Evaluation and normalization: `Evaluation.rkt`
 
+Type checking: `TypeChecking.rkt`
+
+Desugaring: `Desugar.rkt`
+
+Error handling: `ErrorHandling.rkt`
+
+Pattern matching: `MatchingUtils.rkt`
+
+Recursive functions: `RecursionUtils.rkt`
+
+Universe hierarchy `UniverseUtils.rkt`
 # Additional Components of Pie Added:
 - Vectors
 - ind-Vec
