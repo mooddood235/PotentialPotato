@@ -108,9 +108,11 @@ $m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $
 (define elevator (the (Pi ((n Nat) (k (U zero))) (U (add1 n)))
                       (lambda(x z)
                         (ind-Nat x
-                                 (the (Pi ((k Nat)) (U (add1 (add1 k)))) (lambda(t) (U (add1 t))))
+                                 (the (Pi ((k Nat)) (U (add1 (add1 k))))
+                                      (lambda(t) (U (add1 t))))
                                  z
-                                 (the (Pi ((p Nat) (almost (U (add1 p)))) (U (add1 (add1 p)))) (lambda(r b) b))))))
+                                 (the (Pi ((p Nat) (almost (U (add1 p)))) (U (add1 (add1 p))))
+                                      (lambda(r b) b))))))
 ```
 The above code addresses the issue that for a function such as `(Pi ((k Nat)) (U (add1 k)))`, one cannot return a `(U zero)` even though logically `(U zero)` should be a `(U (add1 t))` for any Nat value t. The subtyping rules prevent this since the rule (U n) $\subset$ (U (add1 n)) must be applied (potentially several times) in order to show subtyping, but k in the above type is arbitrary. The above code essentially leverages this more flexible motive in order to create a function which accepts a expression of type `(U zero)` and produces the same expression but with type `(U (add1 n))` for any Nat `n`.
 
