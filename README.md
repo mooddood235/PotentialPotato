@@ -106,7 +106,7 @@ Notice that `fk` is a `(Pi ((t Nat)) (U (add1 (add1 t))))` yet we are able to pa
 `(Pi ((v Nat)) (U (add1 v)))` Notice that after a consistent renaming of variables, (U (add1 v)) can be compared to (U (add1 (add1 t))) even though v and t are both neutral.
 
 Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive $m$ it must be the case that 
-$m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Consider the following code with ind-Nat:
+$m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. In the case of ind-Nat, similarly $m \in (\Pi ((xs \ Nat)) \ (U \ infty))$. Consider the following code with ind-Nat:
 
 ```racket
 (define elevator (the (Pi ((n Nat) (k (U zero))) (U (add1 n)))
@@ -118,8 +118,11 @@ $m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $
                                  (the (Pi ((p Nat) (almost (U (add1 p)))) (U (add1 (add1 p))))
                                       (lambda(r b) b))))))
 ```
-The above code is interesting because it addresses the issue that for a function such as `(Pi ((k Nat)) (U (add1 k)))`, one cannot return a `(U zero)` even though logically `(U zero)` should be a `(U (add1 t))` for any Nat value t. The subtyping rules prevent from declaring that `(U zero)` $\subset$ `(U (add1 t))` because of course, its impossible for us to derive this by applying the rule (U n) $\subset$ (U (add1 n)) any number of times, since k in (U (add1 k)) is arbitrary. 
-`elevator` essentially leverages this more flexible motive in order to create a function which accepts a expression of type `(U zero)` and produces the same expression but with type `(U (add1 n))` for any Nat `n`.
+The above code is interesting because it addresses the issue that for a function such as `(Pi ((k Nat)) (U (add1 k)))`, one cannot return a `(U zero)` even though logically `(U zero)` should be a `(U (add1 t))` for any Nat value t. 
+
+The subtyping rules prevent from declaring that `(U zero)` $\subset$ `(U (add1 t))` because of course, its impossible for us to derive this by applying the rule (U n) $\subset$ (U (add1 n)) any number of times, since k in (U (add1 k)) is arbitrary. 
+
+`elevator` essentially leverages this more flexible motive type in order to create a function which accepts a expression of type `(U zero)` and produces the same expression but with type `(U (add1 n))` for any Nat `n`.
 
 # Code Base Structure
 Evaluation and normalization: `Evaluation.rkt`
