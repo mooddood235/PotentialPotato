@@ -124,7 +124,7 @@ The above code addresses the issue that a function such as `(Pi ((k Nat)) (U (ad
 
 The subtyping rules prevent one from declaring that `(U zero)` $\subset$ `(U (add1 t))` because of course, its impossible for us to derive this by applying the rule (U n) $\subset$ (U (add1 n)) any number of times, since k in the expression (U (add1 k)) is neutral. 
 
-`elevator` essentially leverages this more flexible motive type in order to create a function which accepts a expression of type `(U zero)` and returns the same expression but with type `(U (add1 n))` for any Nat `n`.
+`elevator` essentially leverages this more flexible motive type in a clever way in order to create a function which accepts a expression of type `(U zero)` and returns the same expression but with type `(U (add1 n))` for any Nat `n`.
 
 # Code Base Structure
 Evaluation and normalization: `Evaluation.rkt`
