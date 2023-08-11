@@ -77,7 +77,7 @@ $\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash \ (U \ n) \in 
 
 $\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ expr \in (U \ infty) \ \leadsto \ expr^{\circ}}$ 
 
-Which says that $(U \; n)$ is a subtype of $(U \; infty)$. It is also the case that $(U \; n) \in (U \; infty)$ for any Nat $n$.
+Which says that $(U \ n)$ is a subtype of $(U \ infty)$. It is also the case that $(U \ n) \in (U \ infty)$ for any Nat $n$.
 
 Note: $infty$ is a special Nat that is used for checking types and expressions when running code in the backend, but it should not be used when writing in PotentialPotato.
 
