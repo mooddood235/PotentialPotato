@@ -119,3 +119,12 @@ Note: $infty$ is an expressions that is used for checking types and expressions 
 
 # Code Base Structure
 Logical constructs such as evaluation, synthesis, sugaring/desugaring, etc. can be found in their own racket files. For example, desugaring can be found in `desugar.rkt`.
+
+# Additional Components of Pie Added:
+- Vectors
+- ind-Vec
+- Lists
+- ind-List
+- Either
+- ind-Either
+- Currying
