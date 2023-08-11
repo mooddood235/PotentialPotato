@@ -61,10 +61,10 @@ Is a recursive function that computes the `n`'th member of the Fibonacci sequenc
 - The bottom of the recursive function must be a match expression.
 - The expression being matched must be the last argument to the recursive function.
 
-Gauranteeing Termination:
+Guaranteeing Termination:
 Let `m` be the expression being matched. For every match case, the pattern is a more informative version of `m`. This means a strict sub-expression of the pattern is a strict sub-expression of `m`. Potential Potato restricts the last argument of every recursive call to be a strict sub-expression of the pattern. Hence, the last argument of every recursive call is a strict sub-expression of `m`. Since the last argument of every recursive function is what will be matched, we know that every recursive call is matching an expression that is a strict sub-expression of whatever the parent call was matching. Since every recursive call is matching a strictly smaller expression, and these exists an "else" case that always matches, the recursive function must terminate.
 
-# Universe Heirarchy
+# Universe Hierarchy
 
 $(U \ zero)$ takes the place of $U$ in Pie.
 The main rules for type subsumption are:
