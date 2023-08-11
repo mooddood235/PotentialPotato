@@ -27,7 +27,7 @@
        (let ([ρ (ctx->env Γ)])
          (begin
            (printf "Type: ~v\nNormal form:~v\n"
-                   ty
+                   (read-back-norm Γ (THE (UNI (ZERO)) (val ρ ty)))
                    (read-back-norm Γ
                                    (THE (val ρ ty)
                                         (val ρ expr))))
