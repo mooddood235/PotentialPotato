@@ -1,7 +1,8 @@
 #lang racket
 
 (require "EvaluationStructs.rkt")
-(require "ErrorHandling.rkt") 
+(require "ErrorHandling.rkt")
+
 (define keywords
   (list 'define
         'U
@@ -20,9 +21,13 @@
         'vecnil
         'vec::
         'ind-Vec
-        'ind-List 
+        'ind-List
+        'ind-Either
         'match
-        'infty))
+        'infty
+        'Either
+        'left
+        'right))
 
 ; used : (listof symbol?)
 ; x : symbol?

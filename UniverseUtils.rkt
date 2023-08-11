@@ -57,24 +57,22 @@
   (if (subtype? e1 e2)
       (go 'ok)
       (stop e1 (format "Expected to be the same ~v as ~v"
-                       `(add1 ,lvl)
+                       `(U (add1 ,lvl))
                        e2))))
 
-(define (greater-Nat A B)
+(define (greater-Nat2 A B)
   (match* (A B)
-    [(`(add1 ,n ) `(add1 ,k ))  `(add1 ,(greater-Nat k n))]
-    [(`zero `(add1 ,k)) `(add1 ,k)]
-    [(`(add1 ,k) `zero) `(add1 ,k)]
+    [(`(add1 ,n ) `(add1 ,k ))  (if (equal? (greater-Nat2 k n) `infty) `infty `(add1 ,(greater-Nat2 k n)))]
+    [(`zero `(add1 ,k)) (if (equal? (greater-Nat2 `zero k) `infty) `infty `(add1 ,(greater-Nat2 `zero k)))]
+    [(`(add1 ,k) `zero) (if (equal? (greater-Nat2 `zero k) `infty) `infty `(add1 ,(greater-Nat2 `zero k)))]
     [(`zero `zero) `zero]
-    [(k `(add1 ,k)) `(add1 ,k)]
-    [(`(add1 ,k) k) `(add1 ,k)]
-    [(k k) k]
-    [(`zero k) k]
-    [(k `zero) k]
-    [(`infty k) `infty]
+    [(k `(add1 ,t)) (greater-Nat2 k t)]
+    [(`(add1 ,t) k) (greater-Nat2 k t)]
+    [(k `zero) `infty]
+    [(`zero k) `infty]
     [(k `infty) `infty]
-    [(k `(add1 ,t)) `(add1 ,(greater-Nat k t)) ]
-    [(`(add1 ,t) k) `(add1 ,(greater-Nat k t)) ]
+    [(`infty k) `infty]
+    [(k k) `infty]
     ))
 
-(provide subtype-convert greater-Nat)
+(provide subtype-convert greater-Nat2)

@@ -11,7 +11,6 @@
 ; e : expression?
 (define (val ρ e)
   (match e
-
     [`(the ,type ,expr) (val ρ expr)]
     [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
      (do-match ρ type-in type-out (val ρ expr) case0 case*)]
@@ -32,6 +31,10 @@
 
     ['nil (NIL)]
 
+    [`(Either ,A ,B) (EITHER (val ρ A) (val ρ B))]
+    [`(left ,t) (LEFT (val ρ t))]
+    [`(right ,t) (RIGHT (val ρ t))]
+    
     [`(Vec ,E ,n) (VEC (val ρ E) (val ρ n))]
     [`(vec:: ,head ,tail) (VCAT:: (val ρ head) (val ρ tail))]
     ['vecnil (VECNIL)]
@@ -52,6 +55,10 @@
 
     [`(ind-Vec ,n ,target ,motive ,base, step)
      (do-ind-Vec (val ρ n) (val ρ target) (val ρ motive) (val ρ base) (val ρ step))]
+
+    [`(ind-Either ,target ,motive ,baseLeft ,baseRight)
+     (do-ind-Either (val ρ target) (val ρ motive) (val ρ baseLeft) (val ρ baseRight))]
+     
     [`(= ,A ,from ,to)
      (EQ (val ρ A) (val ρ from) (val ρ to))]
     ['same
@@ -96,6 +103,9 @@
 
     [(THE (LIST E) (CONCAT:: hed tal)) `(:: ,(read-back-norm Γ (THE E hed)) ,(read-back-norm Γ (THE (LIST E) tal)))]
 
+    [(THE (EITHER A B) (LEFT x)) `(left ,(read-back-norm Γ (THE A x)))]
+    [(THE (EITHER A B) (RIGHT x)) `(right ,(read-back-norm Γ (THE B x)))]
+
     [(THE (VEC E n) (VECNIL)) 'vecnil]
 
     [(THE (VEC E (ADD1 n)) (VCAT:: hed tal)) `(vec:: ,(read-back-norm Γ (THE E hed)) ,(read-back-norm Γ (THE (VEC E n) tal)))]
@@ -120,6 +130,8 @@
     [(THE (ATOM) (QUOTE x)) `',x]
 
     [(THE (UNI n) (LIST E)) `(List ,(read-back-norm Γ (THE (UNI n) E)))]
+
+    [(THE (UNI n) (EITHER A B)) `(Either ,(read-back-norm Γ (THE (UNI n) A)) ,(read-back-norm Γ (THE (UNI n) B)))]
 
     [(THE (UNI n) (VEC E s)) `(Vec ,(read-back-norm Γ (THE (UNI n) E)) ,(read-back-norm Γ (THE (NAT) s)))]
     [(THE (UNI n) (NAT)) 'Nat]
@@ -146,7 +158,9 @@
 
     [(THE (UNI k) (UNI n)) `(U ,(read-back-norm Γ (THE (NAT) n)))]
     [(THE t1 (NEU t2 ne))
-     (read-back-neutral Γ ne)]))
+     (read-back-neutral Γ ne)]
+    ;Adding this for the case of ind-Vec
+    [_ (read-back-neutral Γ norm)]))
 
 ; Γ : context?
 ; neu : neutral?
@@ -170,10 +184,15 @@
                ,(read-back-norm Γ motive)
                ,(read-back-norm Γ base)
                ,(read-back-norm Γ step))]
+    [(N-ind-Either target motive baseLeft baseRight)
+     `(ind-Either ,(read-back-norm Γ target)
+                  ,(read-back-norm Γ motive)
+                  ,(read-back-norm Γ baseLeft)
+                  ,(read-back-norm Γ baseRight))]
 
     [(N-ind-Vec n ne motive base step)
-     `(ind-Vec ,(read-back-neutral Γ n)
-               ,(read-back-neutral Γ ne)
+     `(ind-Vec ,(read-back-norm Γ n)
+               ,(read-back-norm Γ ne)
                ,(read-back-norm Γ motive)
                ,(read-back-norm Γ base)
                ,(read-back-norm Γ step))]
@@ -312,16 +331,27 @@
     [(VECNIL) base]
     [(VCAT:: hed res) (match n [(ADD1 t) (do-ap (do-ap (do-ap (do-ap step t) hed) res) (do-ind-Vec t res motive base step))])]
     [(NEU (VEC E k) ne)
-     (NEU ((do-ap motive n) target)
+     (match n
+       [(ADD1 t) (NEU (do-ap (do-ap motive n) target)
           (N-ind-Vec
            n
            ne
-           (THE (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (LIST E)
+           (THE (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (VEC E arg)
                     (H-O-CLOS 'k (lambda (k) (UNI (INFTY))))))))
                 motive)
            (THE (do-ap (do-ap motive (ZERO)) (VECNIL)) base)
            (THE (ind-Vec-step-type motive E)
-                step)))]))
+                step)))]
+       [(NEU (NAT) bk) (NEU (do-ap (do-ap motive n) target)
+          (N-ind-Vec
+           bk
+           ne
+           (THE (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (VEC E arg)
+                    (H-O-CLOS 'k (lambda (k) (UNI (INFTY))))))))
+                motive)
+           (THE (do-ap (do-ap motive (ZERO)) (VECNIL)) base)
+           (THE (ind-Vec-step-type motive E)
+                step)))])]))
 
 (define (ind-Vec-step-type motive E)
   (PI (NAT) (H-O-CLOS 'arg (lambda (arg)
@@ -343,6 +373,22 @@
              [case-out (match-cases expr-norm case0 case*)]
              [r-out (replace-arbitraries expr-norm case-out)])
         (val ρ (desugar r-out)))))
+
+(define (do-ind-Either target motive baseLeft baseRight)
+  (match target
+    [(LEFT Aval) (do-ap baseLeft Aval)]
+    [(RIGHT Bval) (do-ap baseRight Bval)]
+    [(NEU (EITHER A B) ne)
+     (NEU (do-ap motive target)
+          (N-ind-Either
+           ne
+           (THE (PI (EITHER A B)
+                    (H-O-CLOS 'k (lambda (k) (UNI (INFTY)))))
+                motive)
+           (THE (PI A
+                    (H-O-CLOS 't (lambda(t) (do-ap motive (LEFT t))))) baseLeft)
+           (THE (PI B
+                    (H-O-CLOS 'l (lambda(l) (do-ap motive (RIGHT l))))) baseRight)))]))
 
 ; t : value?
 ; v1 : value?

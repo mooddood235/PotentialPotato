@@ -8,7 +8,11 @@
 (struct ZERO () #:transparent)
 
 (struct INFTY () #:transparent)
+(struct EITHER (tA tB) #:transparent)
 
+(struct LEFT (vA)  #:transparent)
+(struct RIGHT (vB) #:transparent)
+(struct N-ind-Either (target motive baseLeft baseRight) #:transparent)
 ; pred : value
 (struct ADD1 (pred) #:transparent)
 

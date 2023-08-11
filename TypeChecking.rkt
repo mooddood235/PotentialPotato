@@ -12,7 +12,7 @@
 (require "RecursionUtils.rkt")
 
 (define (check Γ e t)
-  (match e
+  (match (desugar e)
     [`(cons ,a ,d)
      (match t
        [(SIGMA A D)
@@ -31,7 +31,6 @@
        [(NAT) (go 'infty)]
        [non-NAT (stop e (format "Expected Nat, got ~v"
                                 (read-back-norm Γ (THE (UNI (INFTY)) non-NAT))))])]
-
     [`(add1 ,n)
      (match t
        [(NAT)
@@ -52,6 +51,21 @@
           (go `(:: ,h-out ,t-out)))]
        [non-LIST (stop e (format "Expected (List E), got ~v"
                                   (read-back-norm Γ (THE (UNI (ZERO)) non-LIST))))])]
+    [`(left ,valA)
+     (match t
+       [(EITHER A B)
+        (go-on ([v-out (check Γ valA A)])
+               (go `(left ,v-out)))]
+       [not-EITHER (stop e (format "Expected (Either A B), got ~v"
+                                  (read-back-norm Γ (THE (UNI (ZERO)) not-EITHER))))])]
+    [`(right ,valB)
+     (match t
+       [(EITHER A B)
+        (go-on ([v-out (check Γ valB B)])
+               (go `(right ,v-out)))]
+       [not-EITHER (stop e (format "Expected (Either A B), got ~v"
+                                  (read-back-norm Γ (THE (UNI (ZERO)) not-EITHER))))])]
+                
 
     ['vecnil
      (match t
@@ -103,12 +117,11 @@
                                  (read-back-norm Γ (THE (UNI (ZERO)) non-ATOM))))])]
     [none-of-the-above
      (go-on ([`(the ,t-out ,e-out) (synth Γ e)]
-             [`(the ,t-of-t ,temp) (synth Γ t-out)]
-             [`(U ,n) (U-check Γ t-of-t)]
+             ;[`(the ,t-of-t ,temp) (synth Γ t-out)]
+             ;[`(U ,n) (U-check Γ t-of-t)]
              [`(the ,t-of-t2 ,temp2) (synth Γ (read-back-norm Γ (THE (UNI (ZERO)) t)))]
              [`(U ,n2) (U-check Γ t-of-t2)]
              [_ (subtype-convert Γ n2 (val (ctx->env Γ) t-out) t)])
-             
        (go e-out))]))
 
 (define (U-check Γ expr)
@@ -141,12 +154,12 @@
 ; e : expr?
 
 (define (synth Γ e)
-  (match e
+  (match (desugar e)
     [`(the ,type ,expr)
-         (go-on ([`(the ,typeoftype ,ty) (synth Γ type)]
-             [`(U ,n) (U-check Γ typeoftype)]
-            [e-out (check Γ expr (val (ctx->env Γ) ty))])
-        (go `(the ,ty ,e-out)))]
+         (go-on (
+               [t-out (check Γ type (UNI (INFTY)))]
+            [e-out (check Γ expr (val (ctx->env Γ) t-out))])
+        (go `(the ,t-out ,e-out)))]
     [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
      (go-on ([type-in-out (check Γ type-in (UNI (INFTY)))]
              [type-out-out (check Γ type-out (UNI (INFTY)))]
@@ -159,18 +172,16 @@
                       ,(append `(match ,type-in-out ,type-out-out ,expr-out) (cons case0 case*))))
             (stop e "Match clause is not total. You must include an else case")))]
     [`(U ,n)
-     (go `(the (U (add1 ,n)) (U ,n)))]
+     (go-on ([nval (check Γ n (NAT))])
+     (go `(the (U ,(if (equal? nval `infty) `infty `(add1 ,nval))) (U ,nval))))]
     [`(,(or 'Σ 'Sigma) ((,x ,A)) ,D)
      (go-on ([`(the ,A-type ,A-temp) (synth Γ A)]
+             [A-out (check Γ A (UNI (INFTY)))]
              [`(U ,n) (U-check Γ A-type)]
-             [A-out (check Γ A (UNI (val (ctx->env Γ) n)))]
-             
              [`(the ,D-type ,D-temp) (synth (extend-ctx Γ x (val (ctx->env Γ) A-out)) D)]
-             [`(U ,k) (U-check Γ D-type)]
-             )
-            
-
-        (go `(the (U ,(greater-Nat n k)) (Σ ((,x ,A-temp)) ,D-temp))))]
+             [D-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) D (UNI (INFTY)))]
+             [`(U ,k) (U-check Γ D-type)])
+        (go `(the (U ,(greater-Nat2 n k)) (Σ ((,x ,A-out)) ,D-out))))]
     [`(car ,pr)
      (go-on ([`(the ,pr-ty ,pr-out) (synth Γ pr)]
              [`(the ,pr-ty-ty ,stuff) (synth Γ pr-ty)])
@@ -196,23 +207,29 @@
     ['Nat (go '(the (U zero) Nat))]
     [`(List ,E)
      (go-on ([`(the ,tE ,vE) (synth Γ E)]
-
-             [`(U ,n) (U-check Γ tE)]
+             [_ (check Γ E (UNI (INFTY)))]
              )
             (go `(the ,tE (List ,vE))))]
+    [`(Either ,A ,B)
+     (go-on ([`(the ,t-A ,tempA) (synth Γ A)]
+             [`(U ,An) (U-check Γ t-A)]
+             [A-out (check Γ A (UNI (INFTY)))]
+             [`(the ,t-B ,tempB) (synth Γ B)]
+             [`(U ,Bn) (U-check Γ t-B)]
+             [B-out (check Γ B (UNI (INFTY)))])
+            (go `(the (U ,(greater-Nat2 An Bn)) (Either ,A-out ,B-out))))]
 
     [`(Vec ,E ,n)
      (go-on ([`(the ,tE ,vE) (synth Γ E)]
+             [E-out (check Γ E (UNI (INFTY)))]
              [`(U ,k) (U-check Γ tE)]
              [nk (check Γ n (NAT))])
-            (go `(the (U ,k) (Vec ,vE ,nk))))]
+            (go `(the (U ,k) (Vec ,E-out ,nk))))]
 
     [`(ind-Nat ,target ,motive ,base ,step)
      (go-on ([target-out (check Γ target (NAT))]
-             [`(the (,(or 'Π 'Pi) ((,x ,A)) ,B) ,mot) (synth Γ motive)]
-             [`(U ,n) (U-check Γ B)]
-             [_ (check Γ target (val (ctx->env Γ) A))]
-             [motive-val (go (val (ctx->env Γ) mot))]
+             [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'n (lambda (_) (UNI (INFTY))))))]
+             [motive-val (go (val (ctx->env Γ) motive-out))]
              [base-out (check Γ base (do-ap motive-val (ZERO)))]
              [step-out (check Γ
                               step
@@ -221,20 +238,13 @@
                    Γ
                     (THE (UNI (ZERO))
                         (do-ap motive-val (val (ctx->env Γ) target-out))))
-                        (ind-Nat ,target-out ,mot ,base-out ,step-out))))]
+                        (ind-Nat ,target-out ,motive-out ,base-out ,step-out))))]
 
     [`(ind-List ,target ,motive ,base ,step)
-     (go-on ([`(the ,target-t-t ,target-out-t) (synth Γ target)]
+     (go-on ([`(the ,target-t-t ,target-out) (synth Γ target)]
              [entry-t (go (match (val (ctx->env Γ) target-t-t) [(LIST E) E]))]
-             [target-out (go target-out-t)]
-             
-
-             [`(the (,(or 'Π 'Pi) ((,x ,A)) ,B) ,mot) (synth Γ motive)]
-             [`(U ,n) (U-check Γ B)]
-             [k (check Γ target-out-t (val (ctx->env Γ) A))]
-             [motive-val (go (val (ctx->env Γ) mot))]
-
-             
+             [motive-out (check Γ motive (PI (LIST entry-t) (H-O-CLOS 'n (lambda (_) (UNI (INFTY))))))]
+             [motive-val (go (val (ctx->env Γ) motive-out))]
              [base-out (check Γ base (do-ap motive-val (NIL)))]
              [step-out (check Γ
                               step
@@ -244,13 +254,24 @@
                    Γ
                    (THE (UNI (ZERO))
                         (do-ap motive-val (val (ctx->env Γ) target-out))))
-                 (ind-List ,target-out ,mot ,base-out ,step-out))))]
+                 (ind-List ,target-out ,motive-out ,base-out ,step-out))))]
+    [`(ind-Either ,target ,motive ,baseLeft ,baseRight)
+     (go-on ([`(the (Either ,A ,B) ,target-out) (synth Γ target)]
+             [motive-out (check Γ motive (PI (EITHER (val (ctx->env Γ) A) (val (ctx->env Γ) B)) (H-O-CLOS 'k (lambda(_) (UNI (INFTY))))))]
+             [motive-val (go (val Γ motive-out))]
+             [baseLeft-out (check Γ baseLeft (PI (val (ctx->env Γ) A) (H-O-CLOS 'n (lambda(n) (do-ap motive-val (LEFT n))))))]
+             [baseRight-out (check Γ baseRight (PI (val (ctx->env Γ) A) (H-O-CLOS 't (lambda(t) (do-ap motive-val (RIGHT t))))))])
+            (go `(the ,(read-back-norm
+                       Γ
+                       (THE (UNI (ZERO))
+                            (do-ap motive-val (val (ctx->env Γ) target-out))))
+                      (ind-Either ,target-out ,motive-out ,baseLeft-out ,baseRight-out))))] 
+             
 
     [`(ind-Vec ,n ,target ,motive ,base ,step)
      (go-on ([n-out (check Γ n (NAT))]
-             [`(the ,target-t-t ,target-out-t) (synth Γ target)]
+             [`(the ,target-t-t ,target-out) (synth Γ target)]
              [entry-t (go (match (val (ctx->env Γ) target-t-t) [(VEC E n) E]))]
-             [target-out (go target-out-t)]
              
              [motive-out (check Γ motive (PI (NAT) (H-O-CLOS 'arg (lambda (arg) (PI (VEC entry-t arg) (H-O-CLOS 'n (lambda (_) (UNI (INFTY)))))))))]
              [motive-val (go (val (ctx->env Γ) motive-out))]
@@ -288,15 +309,15 @@
     [`(,(or 'Π 'Pi) ((,x ,A)) ,B)
      
      (go-on ([`(the ,A-type ,A-temp) (synth Γ A)]
-             [`(U ,n) (U-check Γ A-type)]
-             [A-out (check Γ A (UNI (val (ctx->env Γ) n)))]
-             
+             [A-out (check Γ A (UNI (INFTY)))]
+             [`(U ,n) (U-check Γ A-type)] 
+             [B-out (check (extend-ctx Γ x (val (ctx->env Γ) A-out)) B (UNI (INFTY)))]
              [`(the ,B-type ,B-temp) (synth (extend-ctx Γ x (val (ctx->env Γ) A-out)) B)]
              [`(U ,k) (U-check Γ B-type)]
+             [m (go (greater-Nat2 n k))]
              )
             
-    (go `(the (U ,(greater-Nat n k)) (Π ((,x ,A-temp)) ,B-temp))))]
-
+    (go `(the (U ,m) (Π ((,x ,A-out)) ,B-out))))]
     ['Trivial (go '(the (U zero) Trivial))]
     ['Absurd (go '(the (U zero) Absurd))]
     [`(ind-Absurd ,target ,motive)
@@ -305,13 +326,7 @@
        (go `(the ,motive-out (ind-Absurd ,target-out ,motive-out))))]
     ['Atom (go '(the (U zero) Atom))]
     [`(,rator ,rand)
-     (go-on ([`(the (,(or 'Π 'Pi) ((,k ,S)) ,M) ,rator-out) (synth Γ rator)]
-             [`(the ,rator-t ,rator-out) (synth Γ rator)]
-             [`(the ,rator-t-t ,temp) (synth Γ rator-t)]
-             [`(U ,v) (U-check Γ rator-t-t)]
-             [`(the ,M-type ,M-temp) (synth (extend-ctx Γ k (val (ctx->env Γ) S)) M)]
-             [`(U ,g) (U-check Γ M-type)])
-
+     (go-on ([`(the ,rator-t ,rator-out) (synth Γ rator)])
        (match (val (ctx->env Γ) rator-t)
          [(PI A B)
           (go-on ([rand-out (check Γ rand A)])
@@ -323,11 +338,10 @@
                       (,rator-out ,rand-out))))]
          [non-PI (stop rator
                        (format "Expected a Π type, but this is a ~a"
-                               (read-back-norm Γ (THE (UNI (val (ctx->env Γ) v)) non-PI))))]))]
+                               (read-back-norm Γ (THE (UNI (INFTY)) non-PI))))]))]
 
     [x #:when (var? x)
-     (go-on ([t (lookup-type x Γ)]
-             [`(the ,t-type ,temp) (synth Γ (read-back-norm Γ (THE (UNI (ZERO)) t)))])
+     (go-on ([t (lookup-type x Γ)])
        (go `(the ,(read-back-norm Γ (THE (UNI (ZERO)) t)) ,x)))]
     [none-of-the-above (stop e "Can't synthesize a type")]))
 

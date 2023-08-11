@@ -46,5 +46,5 @@
   (run-program `() inputs))
 
 
-(provide run)
+(provide run-program run)
                                                   

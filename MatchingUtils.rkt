@@ -119,6 +119,12 @@
                                                            [n n]))]
                           [else entry-type])])]
     [`(U ,n) (NAT)]
+    [`(Either ,left ,right) (match type-in
+                              [(EITHER tLeft tRight)
+                               (cond
+                                 [(equal? a left) tLeft]
+                                 [(equal? a right) tRight]
+                                 [else "NEver happend1!."])])]
     [n type-in]))
 
 (define (arbitraries-to-fresh arbitraries Γ)
