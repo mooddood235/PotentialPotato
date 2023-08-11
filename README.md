@@ -101,12 +101,12 @@ Consider the following code to highlight this point:
                      (lambda(g) (U g))))
 (fn (add1 zero) subfunc)
 ```
-Notice that `fk` is a `(Pi ((t Nat)) (U (add1 (add1 t))))` yet we are able to pass in the function `subfunc` of type 
+Though `fk` is a `(Pi ((t Nat)) (U (add1 (add1 t))))` its still possible to pass in the function `subfunc` of type 
 
 `(Pi ((v Nat)) (U (add1 v)))` Notice that after a consistent renaming of variables, (U (add1 v)) can be compared to (U (add1 (add1 t))) even though v and t are both neutral.
 
-Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive $m$ it must be the case that 
-$m \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. In the case of ind-Nat, similarly $m \in (\Pi ((xs \ Nat)) \ (U \ infty))$. Consider the following code with ind-Nat:
+Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive it must be the case that 
+$motive \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Similarly in ind-Nat $motive \in (\Pi ((xs \ Nat)) \ (U \ infty))$. Consider the following code with ind-Nat:
 
 ```racket
 (define elevator (the (Pi ((n Nat) (k (U zero))) (U (add1 n)))
