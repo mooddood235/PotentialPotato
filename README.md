@@ -149,5 +149,3 @@ Universe hierarchy `UniverseUtils.rkt`
 - ind-Either
 - Currying
 - -> can be used instead of Pi
-
-https://github.com/mooddood235/PotentialPotato/blob/926db6ab4c3c1c108654669fff1fb91d453307b5/GeneralUtils.rkt
