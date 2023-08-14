@@ -127,48 +127,6 @@ A function is recursive if its definition contains a call to itself.
 
 ## Guaranteeing Termination
 Let `e` be the argument to a recursive function. According to the restrictions, `e` must be the expression being matched, and every recursive call's argument must be a strict sub-expression of the pattern. Since every pattern is a more informative version of `e`, it follows that every recursive call's argument is gauranteed to be a strict sub-expression of `e`. This means that every recursive call is getting an argument that is strictly smaller than the parent call. Since every match expression contains an "else" case, and arguments are always getting smaller, a recursive function must terminate.
-# Universe Hierarchy
-
-`(U zero)` takes the place of $U$ in Pie.
-All the types in Pie that were originally a U now become a (U zero). For example on line 207 in TypeChecking.rkt, when synthesizing the expression Nat. Additionally when checking if Nat is a `(U zero)`, a type is first synthesized for Nat (which is a (U zero)) and then its checked if thats a subtype of the type that was passed into the check function which is a (U zero).
-
-The main rules for type subsumption are:
-
-$\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash (U \ n)\ type \ \leadsto (U \ n^{\circ})}$, The type $(U \ n)$ is introduced where $n$ is a Nat. This can be seen on line 174 of TypeChecking.rkt, this line is also used in type checking similarly to Nat.
-
-$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ This indicates that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$, this can be seen in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/UniverseUtils.rkt#L9C4-L13C54) . Later on the symbol $\subset$ will be used for subtype.
-
-$\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash \ (U \ n) \in (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ This says that $(U \ n)$ typchecks as a $(U \ (add1 \ n))$. So its not only a subtype but also an element of $(U \ (add1 \ n))$.
-
-$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash \ expr \in (U \ infty) \ \leadsto \ expr^{\circ}}$ Which says that $(U \ n)$ is a subtype of $(U \ infty)$. 
-
-A result which also follows from these rules is that $(U \ n) \in (U \ infty)$ for any Nat $n$.
-
-Note: $infty$ is a special Nat that is used for checking types and expressions when running code in the backend, but it should not be used when writing in PotentialPotato.
-
-# More on Subtyping
-This subtyping behavior also extends to functions and other similar objects like Pair, 
-
-$\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ type \ \leadsto \ s$
-
-$\Gamma \vdash \ p \in (\Pi \ ((n \ A)) \ B) \ \leadsto \ p^{\circ}$
-
-$\Gamma \vdash A \subset D \ \leadsto \ A^{\circ} $
-
-$\dfrac{\Gamma,a:A ~ m:D \ \vdash B \subset K \leadsto B^{\circ}} {\ p \in (\Pi \ ((m \ D)) \ K) \ \leadsto \ p^{\circ}}$
-
-The above rules specify that for one Pi expression to be a subtype of another, then their argument types and body types both have to be subtypes.
-
-Consider the following code to highlight this point:
-
-```racket
-(define fn (the (Pi ((n Nat) (ft (Pi ((t Nat)) (U (add1 (add1 t)))))) (U (add1 (add1 n))))
-                (lambda(m s) (s m))))
-(define subfunc (the (Pi ((v Nat)) (U (add1 v)))
-                     (lambda(g) (U g))))
-(fn (add1 zero) subfunc)
-
-```
 
 
 # Code Base Structure
