@@ -73,7 +73,7 @@ The main rules for type subsumption are:
 
 $\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash (U \ n)\ type \ \leadsto (U \ n^{\circ})}$, The type $(U \ n)$ is introduced where $n$ is a Nat. This can be seen on line 174 of TypeChecking.rkt, this line is also used in type checking similarly to Nat.
 
-$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ This indicates that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$, this can be seen in line https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/UniverseUtils.rkt#L9C9-L9C9. Later on the symbol $\subset$ will be used for subtype.
+$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ This indicates that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$, this can be seen in the following [lines]([URL#LXX-LYY](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/UniverseUtils.rkt#L9C4-L13C54)) . Later on the symbol $\subset$ will be used for subtype.
 
 $\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash \ (U \ n) \in (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ This says that $(U \ n)$ typchecks as a $(U \ (add1 \ n))$. So its not only a subtype but also an element of $(U \ (add1 \ n))$.
 
