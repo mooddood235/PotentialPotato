@@ -1,61 +1,123 @@
-# PotentialPotato
+# Potential Potato
 
-Potential Potato is a dependantly typed programming language based on [Pie](https://github.com/the-little-typer/pie). It extends [Pie](https://github.com/the-little-typer/pie) with [pattern matching](https://en.wikipedia.org/wiki/Pattern_matching), [recursive functions](https://en.wikipedia.org/wiki/Recursion_(computer_science)), and a universe hierarchy.
-
-# Type checking 
-Type checking is done using [bidirection type checking](https://ncatlab.org/nlab/show/bidirectional+typechecking). Bidirectional type checking is a type checking strategy in which an expression `e` can be determined to be of type `E` through a combination of checking and synthesis operations. 
-
-$e \implies E$ means we can sythensize the type $E$ given $e$. 
-
-$e \impliedby E$ means the check that $e$ is of type $E$ is successful.
-
-$\dfrac{\Gamma,x:A \vdash M \Leftarrow B}{\Gamma\vdash (\lambda x.M) \Leftarrow (A\to B)}$ tells us that if $x$ is of type $A$, and the check that $M$ is of type $B$ is successful, then checking that $(\lambda (x) M)$ is a function that takes an $A$ and returns a $B$ will be successful. 
-
-$\dfrac{\Gamma\vdash f \Rightarrow (A\to B) \qquad \Gamma\vdash a \Leftarrow A }{\Gamma \vdash f(a) \Rightarrow B}$ tells us that if $f$ sythesizes to a function that takes an $A$ and returns a $B$, and checking that $a$ is an $A$ is successful, then synthesizing $f$ applied to $a$ gives a $B$. 
-
-# Normalization
-Expression normalization in Potential Potato is done using [normalization by evaluation](https://en.wikipedia.org/wiki/Normalisation_by_evaluation). Potential Potato evaluates expressions into meta-level data structures (in our case Racket structures). They can be converted back into Potential Potato syntax using a read-back function. Normalization is done through a combination of evaluation and reading back. For example, to normalize a lambda function, it is evaluated into a `Closure` structure, which contains the body of the function, along with current environment extended with the function's argument. The function can be normalized by reading back:
-
-1. Take the argument that is in the enviromnent `x` and put `λ (x)` on the top.
-2. Evaluated the body of the lambda function, then read the body back.
-
-The result is the normalized lambda expression.
+Potential Potato is a [dependently typed](https://en.wikipedia.org/wiki/Dependent_type) functional programming language based on [Tartlet](https://davidchristiansen.dk/tutorials/nbe/). It extends Tartlet with many of the features in the [Pie](https://github.com/the-little-typer/pie) programming language, aswell as pattern matching, recursive functions, and a universe hierarchy.
 
 # Pattern Matching
+
+Pattern matching is the process of checking whether a given sequence of tokens matches in structure or syntax another sequence of tokens.
+
+Pattern matching is done in Potential Potato through the built-in `match` function.
+
 ```racket
-(match E-in E-out e
-  [pat_0 result_0]
-  [pat_1 result_1]
+(match type-in type-out e
+  [pat_0 res_0]
+  [pat_1 res_1]
   ...
-  [!else result_else])
+  [pat_n res_n])
 ```
-Returns the first `result_n` where `e` matches with the pattern `pat_n`. Tokens from `e` can be bound within a case using `!`. For example,
-```racket
-(match ... some-list
-  ...
-  [(:: !e !es) !es]
-  ...)
+
+Given an expression `e` of type `type-in`, return the first `res_i` where `e` matches with the pattern `pat_i`. Every result is of type `type-out`.
+
+## Pattern Syntax
+A pattern can be any Potential Potato expression in normal form. So, `zero`, `(add1 zero)`, and `(:: 'hello nil)` are all valid patterns.
+
+Let a `b-list` refer to any sequence of tokens properly enclosed within brackets. `(hello (world my friend))` is a `b-list`. 
+
+Let `e` be the expression being matched and `pat` be some pattern.
+
+A token in `pat` prefixed with `!` matches with any token or `b-list` in the same spot structurally in `e`.
+
+## Examples
+
+Expression `e = (add1 zero)` matches with pattern `pat = (add1 zero)` because all the tokens in `e` match structuraly and syntactically with all the tokens in `pat`.
+
+Expression `e = (hello there)` does NOT match with pattern `pat = (bye there)` because `pat` expects the token `bye` where `e` has `hello` instead.
+
+Expression `e = (:: big (:: boss nil))` matches with pattern `pat = (:: big (:: !x nil))` because all the tokens match structuraly and syntactically except for `!x`. However, `!x` is prefixed with `!`, which means it matches with whatever is in the same spot in `e`. In this case `!x` in `pat` is matching with `boss` in `e`.
+
+Expression `e = (:: big (:: boss nil))` matches with pattern `pat = (:: big !hi)` because all the tokens match structuraly and syntactically except for `!hi`. However, `!hi` is prefixed with `!`, which means it matches with whatever is in the same spot in `e`. In this case `!hi` in `pat` is matching with the `b-list` `(:: boss nil)` in `e`.
+
+## Grammar
+
 ```
-Matches `some-list` to any list of the form `(:: head tail)` and returns the tail.
+<match-expr> ::= "(match" <type-in> <type-out> <expr> <cases> ")"
+<cases> ::= <case> | <case> <cases>
+<case> ::= "[" <pattern> <result> "]"
+<nat> ::= "zero" | "(add1" <nat> ")"
+<list> ::= "nil" | "(::" <pattern> <list> ")"
+<vec> ::= "vecnil" | "(vec::" <pattern> <vec> ")"
+<uni> ::= "(U" <nat> ")"
+<pattern> ::= <nat> | <list> | <vec> | <uni> | "!" <literal>
+```
 
-To ensure program correctness: 
-- `e` must be of type `E-in`.
-- Every `result_n` must be of type `E-out`.
-- An "else" case must exist that always matches.
+## Inference Rules
+$\frac
+{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{!}p \ : \ t_{out}\ \vdash \ r \impliedby t_{out}}
+{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{!}p \ r]) \implies t_{out}}
+[SynthElse]
+$
 
-These restrictions ensure that the type of a match expression can be synthesized and checked, and that the match expression will always evaluate to a defined and predictable expression.
+$\frac
+{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{zero} \ : \ \text{Nat} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{zero} \ r] \ rest...) \implies t_{out}}
+[SynthZero]
+$
 
+$\frac
+{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{n} \ : \ \text{Nat} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{add1} \ n) \ r] \ rest...) \implies t_{out}}
+[SynthAdd1]
+$
+
+$\frac
+{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{nil} \ : \ t_{in} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{nil} \ r] \ rest...) \implies t_{out}}
+[SynthNil]
+$
+
+$\frac
+{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ t_{in} \ : \ (\text{List} \ t_l), \ xs \ : \ t_{in}, \ x \ : \ t_l \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(:: \ x \ xs)\ r] \ rest...) \implies t_{out}}
+[Synth::]
+$
+
+$\frac
+{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{vecnil} \ : \ t_{in} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{vecnil} \ r] \ rest...) \implies t_{out}}
+[SynthNil]
+$
+
+
+$\frac
+{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ t_{in} \ : \ (\text{Vec} \ t_l \ n), \ xs \ : \ t_{in}, \ x \ : \ t_l \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{vec::} \ x \ xs)\ r] \ rest...) \implies t_{out}}
+[SynthVec::]
+$
+
+$\frac
+{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{n} \ : \ \text{Nat} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{U} \ n) \ r] \ rest...) \implies t_{out}}
+[SynthU]
+$
 # Recursive Functions
-```racket
-(define rec-fib
-  (the (Pi ((n Nat)) Nat)
-    (lambda (n)
-      (match Nat Nat n
-        [zero zero]
-        [(add1 zero) (add1 zero)]
-        [(add1 (add1 !n)) (+ (rec-fib !n) (rec-fib (add1 !n)))]
-        [!else !else]))))      
+A function is recursive if its definition contains a call to itself.
+
+## Grammar
+
 ```
+<<<<<<< HEAD
+<recursive-function> ::= "(define rec-" <literal>
+                           "(the (Pi ((" <literal> <type> "))" <type> ")"
+                            "(lambda (e)"
+                              "(match" <type-in> <type-out> "e" <cases> "))))"
+<cases> ::= <case> | <case> <cases>
+<case> ::= "[" <pattern> <result> "]"
+<nat> ::= "zero" | "(add1" <nat> ")"
+<list> ::= "nil" | "(::" <pattern> <list> ")"
+<vec> ::= "vecnil" | "(vec::" <pattern> <vec> ")"
+<uni> ::= "(U" <nat> ")"
+<pattern> ::= <nat> | <list> | <vec> | <uni> | "!" <literal>
+=======
 Is a recursive function that computes the `n`'th member of the Fibonacci sequence. In order to classify as a recursive function:
 - The name of the definition must have prefix `rec-`.
 - The bottom of the recursive function must be a match expression.
@@ -104,52 +166,29 @@ Consider the following code to highlight this point:
 (define subfunc (the (Pi ((v Nat)) (U (add1 v)))
                      (lambda(g) (U g))))
 (fn (add1 zero) subfunc)
+>>>>>>> 9b1a0e5555a9b6973e178c0334c82c45178a3a7a
 ```
-Though `fn` requires a `(Pi ((t Nat)) (U (add1 (add1 t))))` to be passed in, its still possible to pass in the function `subfunc` of type 
+## Restrictions
+- A recursive function's name must be prefixed with `rec-`.
+- The function must be of one argument.
+- The body of the recursive function must be a match expression.
+- The expression being matched is the argument to the function.
+- Every recursive call's argument must be a strict sub-expression of the pattern.
 
-`(Pi ((v Nat)) (U (add1 v)))` Notice that after a consistent renaming of variables, (U (add1 v)) can be compared to (U (add1 (add1 t))) even though v and t are both neutral.
-
-Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive it must be the case that 
-$motive \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Similarly in ind-Nat, $motive \in (\Pi ((xs \ Nat)) \ (U \ infty))$. 
-
-Consider the following code with ind-Nat:
-
-```racket
-(define elevator (the (Pi ((n Nat) (k (U zero))) (U (add1 n)))
-                      (lambda(x z)
-                        (ind-Nat x
-                                 (the (Pi ((k Nat)) (U (add1 (add1 k))))
-                                      (lambda(t) (U (add1 t))))
-                                 z
-                                 (the (Pi ((p Nat) (almost (U (add1 p)))) (U (add1 (add1 p))))
-                                      (lambda(r b) b))))))
-```
-The above code addresses the fact that a function such as `(Pi ((k Nat)) (U (add1 k)))` is not allowed to return a `(U zero)` or anything which is a `(U zero)` directly even though logically `(U zero)` should be a `(U (add1 t))` for any Nat value t. 
-
-The subtyping rules prevent one from declaring that `(U zero)` $\subset$ `(U (add1 t))` because of course, its impossible for us to derive this by applying the rule (U n) $\subset$ (U (add1 n)) any number of times, since k in the expression (U (add1 k)) is neutral and cannot be evaluated further. 
-
-The above code essentially leverages this more flexible motive type in a clever way in order to create a function which accepts a expression of type `(U zero)` and returns the same expression but with type `(U (add1 n))` for any Nat `n`.
+## Guaranteeing Termination
+Let `e` be the argument to a recursive function. According to the restrictions, `e` must be the expression being matched, and every recursive call's argument must be a strict sub-expression of the pattern. Since every pattern is a more informative version of `e`, it follows that every recursive call's argument is gauranteed to be a strict sub-expression of `e`. This means that every recursive call is getting an argument that is strictly smaller than the parent call. Since every match expression contains an "else" case, and arguments are always getting smaller, a recursive function must terminate.
 
 # Code Base Structure
-Evaluation and normalization: `Evaluation.rkt`
-
-Type checking: `TypeChecking.rkt`
-
-Desugaring: `Desugar.rkt`
-
-Error handling: `ErrorHandling.rkt`
-
-Pattern matching: `MatchingUtils.rkt`
-
-Recursive functions: `RecursionUtils.rkt`
-
-Universe hierarchy `UniverseUtils.rkt`
-# Additional Components of Pie Added:
-- Vectors
-- ind-Vec
-- Lists
-- ind-List
-- Either
-- ind-Either
-- Currying
-- -> can be used instead of Pi
+- Potential Potato's starting point is `run-program` which is found in `PotentialPotato.rkt`. `run-program` calls top level functions in order to type check the entire program, modify the program's context, evaluate and normalize expressions, and print to the screen.
+- Type checking functions are found in `TypeChecking.rkt`. 
+  - `synth` is the type synthesizer.
+  - `check` is the type checker.
+- Evaluation and normalization logic is closely related. Hence, both can be found in `Evaluation.rkt`.
+  - `val` is the evaluator. 
+    - Every expression has its own evaluator that starts with prefix `do-`. For example, ind-Lists's evaluator is called `do-ind-List`. 
+    - Given an expression `e`, `val` decides which evaluater should be used on `e`.
+  - `read-back-norm` is the normalizer.
+  - `read-back-neutral` is the normalizer for neutral expressions. It is closely linked with `read-back-norm`.
+- When a Potential Potato expression is evaluated, it is turned into a  meta-level Racket structure. All the structures can be found in `EvaluationStructs.rkt`.
+- Utility functions for specific logical constructs can be found in a suitably named file.
+  - General utility functions are found in `GeneralUtils.rkt`.
