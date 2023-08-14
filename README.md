@@ -66,12 +66,14 @@ Let `m` be the expression being matched. For every match case, the pattern is a 
 
 # Universe Hierarchy
 
-$(U \ zero)$ takes the place of $U$ in Pie.
+`(U zero)` takes the place of $U$ in Pie.
+All the types in Pie that were originally a U now become a (U zero). For example on line 207 in TypeChecking.rkt, when synthesizing the expression Nat. Additionally when checking if Nat is a `(U zero)`, a type is first synthesized for Nat (which is a (U zero)) and then its checked if thats a subtype of the type that was passed into the check function which is a (U zero).
+
 The main rules for type subsumption are:
 
-$\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash (U \ n)\ type \ \leadsto (U \ n^{\circ})}$, The type $(U \ n)$ is introduced where $n$ is a Nat.
+$\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash (U \ n)\ type \ \leadsto (U \ n^{\circ})}$, The type $(U \ n)$ is introduced where $n$ is a Nat. This can be seen on line 174 of TypeChecking.rkt, this line is also used in type checking similarly to Nat.
 
-$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ This indicates that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$. Later on the symbol $\subset$ will be used for subtype.
+$\dfrac{\Gamma \vdash expr \in (U \ n) \ \leadsto \ expr^{\circ}}{\Gamma \vdash expr \in (U \ (add1 \ n)) \ \leadsto \ expr^{\circ}}$ This indicates that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$, this can be seen in line https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/UniverseUtils.rkt#L9C9-L9C9. Later on the symbol $\subset$ will be used for subtype.
 
 $\dfrac{\Gamma \vdash n \in Nat \leadsto n^{\circ}}{\Gamma \vdash \ (U \ n) \in (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ This says that $(U \ n)$ typchecks as a $(U \ (add1 \ n))$. So its not only a subtype but also an element of $(U \ (add1 \ n))$.
 
