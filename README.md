@@ -105,7 +105,6 @@ A function is recursive if its definition contains a call to itself.
 ## Grammar
 
 ```
-<<<<<<< HEAD
 <recursive-function> ::= "(define rec-" <literal>
                            "(the (Pi ((" <literal> <type> "))" <type> ")"
                             "(lambda (e)"
@@ -117,7 +116,7 @@ A function is recursive if its definition contains a call to itself.
 <vec> ::= "vecnil" | "(vec::" <pattern> <vec> ")"
 <uni> ::= "(U" <nat> ")"
 <pattern> ::= <nat> | <list> | <vec> | <uni> | "!" <literal>
-=======
+```
 Is a recursive function that computes the `n`'th member of the Fibonacci sequence. In order to classify as a recursive function:
 - The name of the definition must have prefix `rec-`.
 - The bottom of the recursive function must be a match expression.
@@ -166,7 +165,7 @@ Consider the following code to highlight this point:
 (define subfunc (the (Pi ((v Nat)) (U (add1 v)))
                      (lambda(g) (U g))))
 (fn (add1 zero) subfunc)
->>>>>>> 9b1a0e5555a9b6973e178c0334c82c45178a3a7a
+
 ```
 ## Restrictions
 - A recursive function's name must be prefixed with `rec-`.
