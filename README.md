@@ -117,14 +117,16 @@ A function is recursive if its definition contains a call to itself.
 <uni> ::= "(U" <nat> ")"
 <pattern> ::= <nat> | <list> | <vec> | <uni> | "!" <literal>
 ```
-Is a recursive function that computes the `n`'th member of the Fibonacci sequence. In order to classify as a recursive function:
-- The name of the definition must have prefix `rec-`.
-- The bottom of the recursive function must be a match expression.
-- The expression being matched must be the last argument to the recursive function.
 
-Guaranteeing Termination:
-Let `m` be the expression being matched. For every match case, the pattern is a more informative version of `m`. This means a strict sub-expression of the pattern is a strict sub-expression of `m`. Potential Potato restricts the last argument of every recursive call to be a strict sub-expression of the pattern. Hence, the last argument of every recursive call is a strict sub-expression of `m`. Since the last argument of every recursive function is what will be matched, we know that every recursive call is matching an expression that is a strict sub-expression of whatever the parent call was matching. Since every recursive call is matching a strictly smaller expression, and these exists an "else" case that always matches, the recursive function must terminate.
+## Restrictions
+- A recursive function's name must be prefixed with `rec-`.
+- The function must be of one argument.
+- The body of the recursive function must be a match expression.
+- The expression being matched is the argument to the function.
+- Every recursive call's argument must be a strict sub-expression of the pattern.
 
+## Guaranteeing Termination
+Let `e` be the argument to a recursive function. According to the restrictions, `e` must be the expression being matched, and every recursive call's argument must be a strict sub-expression of the pattern. Since every pattern is a more informative version of `e`, it follows that every recursive call's argument is gauranteed to be a strict sub-expression of `e`. This means that every recursive call is getting an argument that is strictly smaller than the parent call. Since every match expression contains an "else" case, and arguments are always getting smaller, a recursive function must terminate.
 # Universe Hierarchy
 
 `(U zero)` takes the place of $U$ in Pie.
@@ -167,15 +169,7 @@ Consider the following code to highlight this point:
 (fn (add1 zero) subfunc)
 
 ```
-## Restrictions
-- A recursive function's name must be prefixed with `rec-`.
-- The function must be of one argument.
-- The body of the recursive function must be a match expression.
-- The expression being matched is the argument to the function.
-- Every recursive call's argument must be a strict sub-expression of the pattern.
 
-## Guaranteeing Termination
-Let `e` be the argument to a recursive function. According to the restrictions, `e` must be the expression being matched, and every recursive call's argument must be a strict sub-expression of the pattern. Since every pattern is a more informative version of `e`, it follows that every recursive call's argument is gauranteed to be a strict sub-expression of `e`. This means that every recursive call is getting an argument that is strictly smaller than the parent call. Since every match expression contains an "else" case, and arguments are always getting smaller, a recursive function must terminate.
 
 # Code Base Structure
 - Potential Potato's starting point is `run-program` which is found in `PotentialPotato.rkt`. `run-program` calls top level functions in order to type check the entire program, modify the program's context, evaluate and normalize expressions, and print to the screen.
