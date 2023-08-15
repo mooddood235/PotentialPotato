@@ -197,7 +197,18 @@ This subtyping behavior also extends to functions and other similar objects like
   src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
 </script>
 
-$\frac{\begin{gathered}\begin{aligned}\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ \text{type} \ \leadsto \ s\\\Gamma \vdash \ p \implies (\Pi \ ((n \ A)) \ B)\\\Gamma \vdash A \subset D\\\Gamma,a:A \, m:D \ \vdash B \subset K\end{aligned}\end{gathered}}{\Gamma,a:A \, m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}$
+\[
+\frac
+{
+  \substack{
+    \Gamma \vdash (\Pi \ ((m \ D)) \ K) \ \text{type} \ \leadsto \ s\\
+    \Gamma \vdash \ p \implies (\Pi \ ((n \ A)) \ B)\\
+    \Gamma \vdash A \subset D\\
+    \Gamma,a:A \, m:D \ \vdash B \subset K
+  }
+}
+{\Gamma,a:A \, m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}
+\]
 
 $\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ type \ \leadsto \ s$
 
