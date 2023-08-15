@@ -51,7 +51,7 @@ Expression `e = (:: big (:: boss nil))` matches with pattern `pat = (:: big !hi)
 ```
 
 ## Inference Rules
-$\dfrac
+$$\dfrac
 {
   \begin{aligned}
     \Gamma \ &\vdash \ e \impliedby t_{in}\\
@@ -60,9 +60,9 @@ $\dfrac
   }
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{!}p \ r]) \implies t_{out}}
 [SynthElse]
-$
+$$
 
-$\dfrac
+$$\dfrac
 {
   \begin{aligned}
     \Gamma \ &\vdash \ e \impliedby t_{in}\\
@@ -71,9 +71,9 @@ $\dfrac
   \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{zero} \ r] \ rest...) \implies t_{out}}
 [SynthZero]
-$
+$$
 
-$\dfrac
+$$\dfrac
 {
   \begin{aligned}
     \Gamma \ &\vdash \ e \impliedby t_{in}\\
@@ -82,9 +82,9 @@ $\dfrac
   \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{add1} \ n) \ r] \ rest...) \implies t_{out}}
 [SynthAdd1]
-$
+$$
 
-$\dfrac
+$$\dfrac
 {
   \begin{aligned}
     \Gamma \ &\vdash \ e \impliedby t_{in}\\
@@ -93,9 +93,9 @@ $\dfrac
   \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{nil} \ r] \ rest...) \implies t_{out}}
 [SynthNil]
-$
+$$
 
-$\dfrac
+$$\dfrac
 {
   \begin{aligned}
     &\Gamma \ \vdash \ e \impliedby t_{in}\\
@@ -104,9 +104,9 @@ $\dfrac
   \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(:: \ x \ xs)\ r] \ rest...) \implies t_{out}}
 [Synth::]
-$
+$$
 
-$\dfrac
+$$\dfrac
 {
   \begin{aligned}
     \Gamma \ &\vdash \ e \impliedby t_{in}\\
@@ -115,10 +115,10 @@ $\dfrac
   \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{vecnil} \ r] \ rest...) \implies t_{out}}
 [SynthVecnil]
-$
+$$
 
 
-$\dfrac
+$$\dfrac
 {
   \begin{aligned}
     &\Gamma \ \vdash \ e \impliedby t_{in}\\
@@ -127,9 +127,9 @@ $\dfrac
   \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{vec::} \ x \ xs)\ r] \ rest...) \implies t_{out}}
 [SynthVec::]
-$
+$$
 
-$\dfrac
+$$\dfrac
 {
   \begin{aligned}
     \Gamma \ &\vdash \ e \impliedby t_{in}\\
@@ -138,12 +138,12 @@ $\dfrac
   \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{U} \ n) \ r] \ rest...) \implies t_{out}}
 [SynthU]
-$
+$$
 
-$\dfrac
+$$\dfrac
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ cases) \implies t_{out}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ cases) \impliedby t_{out}}[CheckMatch]
-$
+$$
 # Recursive Functions
 A function is recursive if its definition contains a call to itself.
 
