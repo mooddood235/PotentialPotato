@@ -115,6 +115,13 @@
         (go `',a)]
        [non-ATOM (stop e (format "Expected Atom, got ~v"
                                  (read-back-norm Γ (THE (UNI (ZERO)) non-ATOM))))])]
+    [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
+     (cond
+         [(equal? t (val Γ type-out)) (go e)]
+       [else (stop e (format "Expected ~v, got ~v"
+                        type-out
+                        (read-back-norm Γ (THE (UNI (INFTY)) t))))])]
+       
     [none-of-the-above
      (go-on ([`(the ,t-out ,e-out) (synth Γ e)]
              ;[`(the ,t-of-t ,temp) (synth Γ t-out)]
@@ -360,6 +367,6 @@
            [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
              (if (rec-check-cases name (cons case0 case*))
                  (go e)
-                 (stop e "The last argument of a recursive case must be a strict sub expression of the match pattern."))])))
+                 (stop e "The argument of a recursive call must be a strict sub-expression of the match pattern."))])))
 
 (provide synth rec-synth)

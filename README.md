@@ -141,7 +141,7 @@ $$\dfrac
 $$
 
 $$\dfrac
-{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ cases) \implies t_{out}}
+{}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ cases) \impliedby t_{out}}[CheckMatch]
 $$
 # Recursive Functions

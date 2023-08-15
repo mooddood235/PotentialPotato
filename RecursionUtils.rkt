@@ -51,9 +51,9 @@
   (match e
     [`(,(or 'λ 'lambda) (,expr) (match ,type-in ,type-out ,expr ,case0 ,case* ...))
      (go (append `(match ,type-in ,type-out ,expr) (cons case0 case*)))]
-    [`(,(or 'λ 'lambda) (,x) ,b) (check-recursive-form b)]
+    ;[`(,(or 'λ 'lambda) (,x) ,b) (check-recursive-form b)]
     [else
-     (stop e "Recursive functions must be of the form (λ (x y ... z) (match A B z ...))")]))
+     (stop e "Recursive functions must be of the form (λ (e) (match A B e ...))")]))
 
 (provide (all-defined-out))
                         
