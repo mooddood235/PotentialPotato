@@ -52,50 +52,90 @@ Expression `e = (:: big (:: boss nil))` matches with pattern `pat = (:: big !hi)
 
 ## Inference Rules
 $\dfrac
-{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{!}p \ : \ t_{out}\ \vdash \ r \impliedby t_{out}}
+{
+  \begin{aligned}
+    \Gamma \ &\vdash \ e \impliedby t_{in}\\
+    \Gamma, \ \text{!}p \ : \ t_{out}\ &\vdash \ r \impliedby t_{out}
+  \end{aligned}
+  }
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{!}p \ r]) \implies t_{out}}
 [SynthElse]
 $
 
 $\dfrac
-{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{zero} \ : \ \text{Nat} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{
+  \begin{aligned}
+    \Gamma \ &\vdash \ e \impliedby t_{in}\\
+    \Gamma, \ \text{zero} \ : \ \text{Nat} \ &\vdash \ r \impliedby t_{out}\\
+    \Gamma \ &\vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}
+  \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{zero} \ r] \ rest...) \implies t_{out}}
 [SynthZero]
 $
 
 $\dfrac
-{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{n} \ : \ \text{Nat} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{
+  \begin{aligned}
+    \Gamma \ &\vdash \ e \impliedby t_{in}\\
+    \Gamma, \ \text{n} \ : \ \text{Nat} \ &\vdash \ r \impliedby t_{out}\\
+    \Gamma \ &\vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}
+  \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{add1} \ n) \ r] \ rest...) \implies t_{out}}
 [SynthAdd1]
 $
 
 $\dfrac
-{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{nil} \ : \ t_{in} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{
+  \begin{aligned}
+    \Gamma \ &\vdash \ e \impliedby t_{in}\\
+    \Gamma, \ \text{nil} \ : \ t_{in} \ &\vdash \ r \impliedby t_{out}\\
+    \Gamma \ &\vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}
+  \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{nil} \ r] \ rest...) \implies t_{out}}
 [SynthNil]
 $
 
 $\dfrac
-{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ t_{in} \ \equiv \ (\text{List} \ t_l) \ \text{\textbf{type}}, \ xs \ : \ t_{in}, \ x \ : \ t_l \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash \ (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{
+  \begin{aligned}
+    &\Gamma \ \vdash \ e \impliedby t_{in}\\
+    &\Gamma, \ t_{in} \ \equiv \ (\text{List} \ t_l) \ \text{\textbf{type}}, \ xs \ : \ t_{in}, \ x \ : \ t_l \ \vdash \ r \impliedby t_{out}\\
+    &\Gamma \ \vdash \ (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}
+  \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(:: \ x \ xs)\ r] \ rest...) \implies t_{out}}
 [Synth::]
 $
 
 $\dfrac
-{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{vecnil} \ : \ t_{in} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{
+  \begin{aligned}
+    \Gamma \ &\vdash \ e \impliedby t_{in}\\
+    \Gamma, \ \text{vecnil} \ : \ t_{in} \ &\vdash \ r \impliedby t_{out}\\
+    \Gamma \ &\vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}
+  \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{vecnil} \ r] \ rest...) \implies t_{out}}
 [SynthVecnil]
 $
 
 
 $\dfrac
-{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ t_{in} \ \equiv \ (\text{Vec} \ t_l \ n) \ \text{\textbf{type}}, \ xs \ : \ t_{in}, \ x \ : \ t_l \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{
+  \begin{aligned}
+    &\Gamma \ \vdash \ e \impliedby t_{in}\\
+    &\Gamma, \ t_{in} \ \equiv \ (\text{Vec} \ t_l \ n) \ \text{\textbf{type}}, \ xs \ : \ t_{in}, \ x \ : \ t_l \ \vdash \ r \impliedby t_{out}\\
+    &\Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}
+  \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{vec::} \ x \ xs)\ r] \ rest...) \implies t_{out}}
 [SynthVec::]
 $
 
 $\dfrac
-{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{n} \ : \ \text{Nat} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+{
+  \begin{aligned}
+    \Gamma \ &\vdash \ e \impliedby t_{in}\\
+    \Gamma, \ \text{n} \ : \ \text{Nat} \ &\vdash \ r \impliedby t_{out}\\
+    \Gamma \ &\vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}
+  \end{aligned}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{U} \ n) \ r] \ rest...) \implies t_{out}}
 [SynthU]
 $
