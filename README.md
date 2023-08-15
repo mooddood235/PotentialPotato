@@ -179,8 +179,7 @@ All the types in Pie that were originally a U now become a (U zero). For example
 
 The main rules for type subsumption are:
 
-$\dfrac{\Gamma \vdash n \impliedby  Nat}
-{\Gamma \vdash (U \ n)\ type \ \leadsto (U \ n^{\circ})}$, The type $(U \ n)$ is introduced where $n$ is a Nat.
+$\dfrac{\Gamma \vdash n \impliedby  Nat}{\Gamma \vdash (U \ n) \ type \ \leadsto (U \ n^{\circ})}$, The type $(U \ n)$ is introduced where $n$ is a Nat.
 
 $\dfrac{\Gamma \vdash expr \implies (U \ n)}{\Gamma \vdash expr \impliedby (U \ (add1 \ n))$ This indicates that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$. When an expression is checked for the type `(U (add1 n))`, firstly a type is [synthesized](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L119C6-L125C22) for it and then its compared against the type being checked against in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/UniverseUtils.rkt#L9C4-L13C54). Later on the symbol $\subset$ will be used for subtype.
 
@@ -201,7 +200,7 @@ $\Gamma \vdash \ p \implies (\Pi \ ((n \ A)) \ B)$
 
 $\Gamma \vdash A \subset D $
 
-$\dfrac{\Gamma,a:A ~ m:D \ \vdash B \subset K } {\ p \impliedby (\Pi \ ((m \ D)) \ K)}$
+$\dfrac{\Gamma,a:A ~ m:D \ \vdash B \subset K }{\ p \impliedby (\Pi \ ((m \ D)) \ K)}$
 
 The above rules specify that for one Pi expression to be a subtype of another, then their argument types and body types both have to be subtypes.
 
