@@ -203,8 +203,7 @@ $$\frac
       &\Gamma,a:A \, m:D \ \vdash B \subset K
     \end{aligned}
   }
-}$$
-{\Gamma,a:A \, m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}
+}{\Gamma,a:A \, m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}$$
 
 $\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ type \ \leadsto \ s$
 
