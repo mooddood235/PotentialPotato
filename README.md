@@ -220,10 +220,10 @@ Consider the following code to highlight this point:
 
 Though `fn` requires a `(Pi ((t Nat)) (U (add1 (add1 t))))` to be passed in, its still possible to pass in the function `subfunc` of type 
 
-`(Pi ((v Nat)) (U (add1 v)))` Notice that after a consistent renaming of variables, (U (add1 v)) can be compared to (U (add1 (add1 t))) even though v and t are both neutral.
+`(Pi ((v Nat)) (U (add1 v)))` (the typing for this is done in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L328C5-L341C83)) Notice that after a consistent renaming of variables, (U (add1 v)) can be compared to (U (add1 (add1 t))) even though v and t are both neutral.
 
-Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive it must be the case that 
-$motive \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Similarly in ind-Nat, $motive \in (\Pi ((xs \ Nat)) \ (U \ infty))$. 
+Functions such as ind-Nat, ind-List and ind-Vec have also been [modified](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L246C14-L246C104) to facilitate for these higher types. In the case of ind-List for example, this means that for a motive it must be the case that 
+$motive \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Similarly in [ind-Nat](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L231), $motive \in (\Pi ((xs \ Nat)) \ (U \ infty))$. 
 
 Consider the following code with ind-Nat:
 
@@ -239,7 +239,7 @@ Consider the following code with ind-Nat:
 ```
 The above code addresses the fact that a function such as `(Pi ((k Nat)) (U (add1 k)))` is not allowed to return a `(U zero)` or anything which is a `(U zero)` directly even though logically `(U zero)` should be a `(U (add1 t))` for any Nat value t. 
 
-The subtyping rules prevent one from declaring that `(U zero)` $\subset$ `(U (add1 t))` because of course, its impossible for us to derive this by applying the rule (U n) $\subset$ (U (add1 n)) any number of times, since k in the expression (U (add1 k)) is neutral and cannot be evaluated further. 
+The subtyping rules prevent one from declaring that `(U zero)` $\subset$ `(U (add1 t))` because of course, its impossible for us to derive this by [applying the rule](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/UniverseUtils.rkt#L9C1-L13C54) (U n) $\subset$ (U (add1 n)) any number of times, since k in the expression (U (add1 k)) is neutral and cannot be evaluated further. 
 
 
 # Code Base Structure
