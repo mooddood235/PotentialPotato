@@ -51,53 +51,58 @@ Expression `e = (:: big (:: boss nil))` matches with pattern `pat = (:: big !hi)
 ```
 
 ## Inference Rules
-$\frac
+$\dfrac
 {\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{!}p \ : \ t_{out}\ \vdash \ r \impliedby t_{out}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{!}p \ r]) \implies t_{out}}
 [SynthElse]
 $
 
-$\frac
+$\dfrac
 {\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{zero} \ : \ \text{Nat} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{zero} \ r] \ rest...) \implies t_{out}}
 [SynthZero]
 $
 
-$\frac
+$\dfrac
 {\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{n} \ : \ \text{Nat} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{add1} \ n) \ r] \ rest...) \implies t_{out}}
 [SynthAdd1]
 $
 
-$\frac
+$\dfrac
 {\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{nil} \ : \ t_{in} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{nil} \ r] \ rest...) \implies t_{out}}
 [SynthNil]
 $
 
-$\frac
-{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ t_{in} \ : \ (\text{List} \ t_l), \ xs \ : \ t_{in}, \ x \ : \ t_l \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+$\dfrac
+{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ t_{in} \ \equiv \ (\text{List} \ t_l) \ \text{\textbf{type}}, \ xs \ : \ t_{in}, \ x \ : \ t_l \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash \ (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(:: \ x \ xs)\ r] \ rest...) \implies t_{out}}
 [Synth::]
 $
 
-$\frac
+$\dfrac
 {\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{vecnil} \ : \ t_{in} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{vecnil} \ r] \ rest...) \implies t_{out}}
-[SynthNil]
+[SynthVecnil]
 $
 
 
-$\frac
-{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ t_{in} \ : \ (\text{Vec} \ t_l \ n), \ xs \ : \ t_{in}, \ x \ : \ t_l \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
+$\dfrac
+{\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ t_{in} \ \equiv \ (\text{Vec} \ t_l \ n) \ \text{\textbf{type}}, \ xs \ : \ t_{in}, \ x \ : \ t_l \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{vec::} \ x \ xs)\ r] \ rest...) \implies t_{out}}
 [SynthVec::]
 $
 
-$\frac
+$\dfrac
 {\Gamma \ \vdash \ e \impliedby t_{in} \ \Gamma, \ \text{n} \ : \ \text{Nat} \ \vdash \ r \impliedby t_{out} \ \Gamma \ \vdash (\text{match}\ t_{in} \ t_{out} \ e \ rest...) \implies t_{out}}
 {\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [(\text{U} \ n) \ r] \ rest...) \implies t_{out}}
 [SynthU]
+$
+
+$\dfrac
+{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ cases) \implies t_{out}}
+{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ cases) \impliedby t_{out}}[CheckMatch]
 $
 # Recursive Functions
 A function is recursive if its definition contains a call to itself.
