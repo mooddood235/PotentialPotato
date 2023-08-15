@@ -193,22 +193,18 @@ Note: $infty$ is a special Nat that is used for checking types and expressions w
 
 # More on Subtyping
 This subtyping behavior also extends to functions and other similar objects like Pair, 
-<script type="text/javascript" async
-  src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
-</script>
-
-\[
-\frac
+$$\frac
 {
   \substack{
-    \Gamma \vdash (\Pi \ ((m \ D)) \ K) \ \text{type} \ \leadsto \ s\\
-    \Gamma \vdash \ p \implies (\Pi \ ((n \ A)) \ B)\\
-    \Gamma \vdash A \subset D\\
-    \Gamma,a:A \, m:D \ \vdash B \subset K
+    \begin{aligned}
+      &\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ \text{type} \ \leadsto \ s\\
+      &\Gamma \vdash \ p \implies (\Pi \ ((n \ A)) \ B)\\
+      &\Gamma \vdash A \subset D\\
+      &\Gamma,a:A \, m:D \ \vdash B \subset K
+    \end{aligned}
   }
-}
+}$$
 {\Gamma,a:A \, m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}
-\]
 
 $\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ type \ \leadsto \ s$
 
