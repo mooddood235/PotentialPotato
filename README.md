@@ -202,8 +202,7 @@ $\dfrac
     \Gamma \vdash A \subset D\\
     \Gamma,a:A ~ m:D \ \vdash B \subset K
   \end{aligned}}
-{\Gamma \ \vdash \ (\text{match} \ t_{in} \ t_{out} \ e \ [\text{zero} \ r] \ rest...) \implies t_{out}}
-[SynthZero]
+{\Gamma,a:A ~ m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}
 $
 
 $\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ type \ \leadsto \ s$
