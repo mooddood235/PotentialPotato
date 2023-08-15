@@ -203,7 +203,9 @@ $\Gamma \vdash A \subset D $
 
 $\dfrac{\Gamma,a:A ~ m:D \ \vdash B \subset K }{\Gamma,a:A ~ m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}$
 
-The above rules specify that for one Pi expression to be a subtype of another, then their argument types and body types both have to be subtypes. This can more clearly be seen in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L104C5-L111C81) of code. Here the lambda expression is being checked against a type, but due to the fact that the check function specifically checks for subtyping, this means that if the same lambda expression were to be passed in with a supertype and x bound to a supertype of A, then the lambda expression would successfully typecheck.
+The above rules specify that for one Pi expression to be a subtype of another, then their argument types and body types both have to be subtypes. This can more clearly be seen in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L104C5-L111C81) of code. Here the lambda expression is being checked against a type, but due to the fact that the check function specifically checks for subtyping, this means that if the same lambda expression were to be passed in with a supertype and x bound to D a supertype of A, then the lambda expression would successfully typecheck.
+
+A similar process happens in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/UniverseUtils.rkt#L23C5-L28C56).
 
 Consider the following code to highlight this point:
 
