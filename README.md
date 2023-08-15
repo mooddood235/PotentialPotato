@@ -188,6 +188,7 @@ $\dfrac{\Gamma \vdash expr \implies (U \ n)}{\Gamma \vdash expr \impliedby (U \ 
 This indicates that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$. When an expression is checked for the type (U (add1 n)), firstly a type is [synthesized](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L119C6-L125C22) for it and then its compared against the type being checked against in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/UniverseUtils.rkt#L9C4-L13C54). Later on the symbol $\subset$ will be used for subtype.
 
 $\dfrac{\Gamma \vdash n \impliedby Nat }{\Gamma \vdash \ (U \ n) \impliedby (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ 
+
 This says that $(U \ n)$ typchecks as a $(U \ (add1 \ n))$. This is because to typecheck it, first a type is [synthesized](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L174C1-L176C81) for it, and the synthesis provides the type (U (add1 n)). So its not only a subtype but also an element of $(U \ (add1 \ n))$.
 
 $\dfrac{\Gamma \vdash expr \implies (U \ n)}{\Gamma \vdash \ expr \impliedby (U \ infty) }$
@@ -201,16 +202,17 @@ Note: $infty$ is a special Nat that is used for checking types and expressions w
 # More on Subtyping
 This subtyping behavior also extends to functions and other similar objects like Pair, 
 
-
 $\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ type \ \leadsto \ s$
 
 $\Gamma \vdash \ p \impliedby (\Pi \ ((n \ A)) \ B)$
 
 $\Gamma \vdash A \subset D $
 
-$\dfrac{\Gamma,a:A ~ m:D \ \vdash B \subset K }{\Gamma,a:A ~ m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}$
+$\dfrac{\Gamma,a:A ~ m:D \ \vdash B \subset K }
+{\Gamma,a:A ~ m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}$
 
-The above rules specify that for one Pi expression to be a subtype of another, then their argument types and body types both have to be subtypes. This can more clearly be seen in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L104C5-L111C81) of code. Here the lambda expression is being checked against a type, but due to the fact that the check function specifically checks for subtyping, this means that if the same lambda expression were to be passed in with a supertype and x bound to D a supertype of A, then the lambda expression would successfully typecheck.
+The above rules specify that for one Pi expression to be a subtype of another, then their argument types and body types both have to be subtypes. This can more clearly be seen in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L104C5-L111C81) of code. 
+In the code the lambda expression is being checked against a type, but due to the fact that the check function specifically checks for subtyping, this means that if the same lambda expression were to be passed in with a supertype and x bound to D a supertype of A, then the lambda expression would successfully typecheck.
 
 A similar process happens in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/UniverseUtils.rkt#L23C5-L28C56).
 
