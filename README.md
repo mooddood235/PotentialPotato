@@ -173,6 +173,82 @@ A function is recursive if its definition contains a call to itself.
 ## Guaranteeing Termination
 Let `e` be the argument to a recursive function. According to the restrictions, `e` must be the expression being matched, and every recursive call's argument must be a strict sub-expression of the pattern. Since every pattern is a more informative version of `e`, it follows that every recursive call's argument is gauranteed to be a strict sub-expression of `e`. This means that every recursive call is getting an argument that is strictly smaller than the parent call. Since every match expression contains an "else" case, and arguments are always getting smaller, a recursive function must terminate.
 
+# Universe Hierarchy
+
+All the types in Pie that were originally a U now become a (U zero). For example on [line](https://github.com/mooddood235/PotentialPotato/blob/b058a08fbf97bbe8b30a22acbe6176375e84f6b4/TypeChecking.rkt#L214C36-L214C36) 207 in TypeChecking.rkt, when synthesizing the expression Nat. Additionally when checking if Nat is a `(U zero)`, a type is first synthesized for Nat (which is a (U zero)) and then its checked if thats a subtype of the type that was passed into the check function which is a (U zero).
+
+The main rules for type subsumption are:
+
+$\dfrac{\Gamma \vdash n \impliedby  Nat}{\Gamma \vdash (U \ n) \ type \ \leadsto (U \ n^{\circ})}$, The type $(U \ n)$ is introduced where $n$ is a Nat.
+
+$\dfrac{\Gamma \vdash expr \implies (U \ n)}{\Gamma \vdash expr \impliedby (U \ (add1 \ n))}$ This indicates that $(U \ n)$ is a subtype of $(U \ (add1 \ n))$. When an expression is checked for the type (U (add1 n)), firstly a type is [synthesized](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L119C6-L125C22) for it and then its compared against the type being checked against in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/UniverseUtils.rkt#L9C4-L13C54). Later on the symbol $\subset$ will be used for subtype.
+
+$\dfrac{\Gamma \vdash n \impliedby Nat }{\Gamma \vdash \ (U \ n) \impliedby (U \ (add1 \ n)) \ \leadsto \ (U \ n^{\circ})}$ This says that $(U \ n)$ typchecks as a $(U \ (add1 \ n))$. This is because to typecheck it, first a type is [synthesized](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L174C1-L176C81) for it, and the synthesis provides the type (U (add1 n)). So its not only a subtype but also an element of $(U \ (add1 \ n))$.
+
+$\dfrac{\Gamma \vdash expr \implies (U \ n)}{\Gamma \vdash \ expr \impliedby (U \ infty) }$ Which says that $(U \ n)$ is a [subtype](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/UniverseUtils.rkt#L9C4-L14C13) of $(U \ infty)$, the checking and synthesis here works similarly to the previous rules.
+
+A result which also follows from these rules is that $(U \ n) \in (U \ infty)$ for any Nat $n$.
+
+Note: $infty$ is a special Nat that is used for checking types and expressions when running code in the backend, but it should not be used when writing in PotentialPotato.
+
+# More on Subtyping
+This subtyping behavior also extends to functions and other similar objects like Pair, 
+$$\frac
+{
+  \substack{
+    \begin{aligned}
+      &\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ \text{type} \ \leadsto \ s\\
+      &\Gamma \vdash \ p \implies (\Pi \ ((n \ A)) \ B)\\
+      &\Gamma \vdash A \subset D\\
+      &\Gamma,a:A \, m:D \ \vdash B \subset K
+    \end{aligned}
+  }
+}{\Gamma,a:A \, m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}$$
+
+$\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ type \ \leadsto \ s$
+
+$\Gamma \vdash \ p \implies (\Pi \ ((n \ A)) \ B)$
+
+$\Gamma \vdash A \subset D $
+
+$\dfrac{\Gamma,a:A ~ m:D \ \vdash B \subset K }{\Gamma,a:A ~ m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}$
+
+The above rules specify that for one Pi expression to be a subtype of another, then their argument types and body types both have to be subtypes.
+
+Consider the following code to highlight this point:
+
+```racket
+(define fn (the (Pi ((n Nat) (ft (Pi ((t Nat)) (U (add1 (add1 t)))))) (U (add1 (add1 n))))
+                (lambda(m s) (s m))))
+(define subfunc (the (Pi ((v Nat)) (U (add1 v)))
+                     (lambda(g) (U g))))
+(fn (add1 zero) subfunc)
+```
+
+
+Though `fn` requires a `(Pi ((t Nat)) (U (add1 (add1 t))))` to be passed in, its still possible to pass in the function `subfunc` of type 
+
+`(Pi ((v Nat)) (U (add1 v)))` Notice that after a consistent renaming of variables, (U (add1 v)) can be compared to (U (add1 (add1 t))) even though v and t are both neutral.
+
+Functions such as ind-Nat, ind-List and ind-Vec have also been modified to facilitate for these higher types. In the case of ind-List for example, this means that for a motive it must be the case that 
+$motive \in (\Pi ((xs \ (List \ E))) \ (U \ infty))$, so proofs using supertypes of $(U zero)$ (which replaces U in Pie) can be done with ind-List in this language. Similarly in ind-Nat, $motive \in (\Pi ((xs \ Nat)) \ (U \ infty))$. 
+
+Consider the following code with ind-Nat:
+
+```racket
+(define elevator (the (Pi ((n Nat) (k (U zero))) (U (add1 n)))
+                      (lambda(x z)
+                        (ind-Nat x
+                                 (the (Pi ((k Nat)) (U (add1 (add1 k))))
+                                      (lambda(t) (U (add1 t))))
+                                 z
+                                 (the (Pi ((p Nat) (almost (U (add1 p)))) (U (add1 (add1 p))))
+                                      (lambda(r b) b))))))
+```
+The above code addresses the fact that a function such as `(Pi ((k Nat)) (U (add1 k)))` is not allowed to return a `(U zero)` or anything which is a `(U zero)` directly even though logically `(U zero)` should be a `(U (add1 t))` for any Nat value t. 
+
+The subtyping rules prevent one from declaring that `(U zero)` $\subset$ `(U (add1 t))` because of course, its impossible for us to derive this by applying the rule (U n) $\subset$ (U (add1 n)) any number of times, since k in the expression (U (add1 k)) is neutral and cannot be evaluated further. 
+
 
 # Code Base Structure
 - Potential Potato's starting point is `run-program` which is found in `PotentialPotato.rkt`. `run-program` calls top level functions in order to type check the entire program, modify the program's context, evaluate and normalize expressions, and print to the screen.
