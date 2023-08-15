@@ -116,11 +116,12 @@
        [non-ATOM (stop e (format "Expected Atom, got ~v"
                                  (read-back-norm Γ (THE (UNI (ZERO)) non-ATOM))))])]
     [`(match ,type-in ,type-out ,expr ,case0 ,case* ...)
-     (cond
-         [(equal? t (val Γ type-out)) (go e)]
-       [else (stop e (format "Expected ~v, got ~v"
-                        type-out
-                        (read-back-norm Γ (THE (UNI (INFTY)) t))))])]
+     (go-on ([`(the ,t-out ,e-out) (synth Γ e)])
+            (cond
+              [(equal? t (val Γ t-out)) (go e)]
+              [else (stop e (format "Expected ~v, got ~v"
+                                    type-out
+                                    (read-back-norm Γ (THE (UNI (INFTY)) t))))]))]
        
     [none-of-the-above
      (go-on ([`(the ,t-out ,e-out) (synth Γ e)]
