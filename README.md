@@ -193,27 +193,17 @@ Note: $infty$ is a special Nat that is used for checking types and expressions w
 
 # More on Subtyping
 This subtyping behavior also extends to functions and other similar objects like Pair, 
-$$\frac
-{
-  \substack{
-    \begin{aligned}
-      &\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ \text{type} \ \leadsto \ s\\
-      &\Gamma \vdash \ p \implies (\Pi \ ((n \ A)) \ B)\\
-      &\Gamma \vdash A \subset D\\
-      &\Gamma,a:A \, m:D \ \vdash B \subset K
-    \end{aligned}
-  }
-}{\Gamma,a:A \, m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}$$
+
 
 $\Gamma \vdash (\Pi \ ((m \ D)) \ K) \ type \ \leadsto \ s$
 
-$\Gamma \vdash \ p \implies (\Pi \ ((n \ A)) \ B)$
+$\Gamma \vdash \ p \impliedby (\Pi \ ((n \ A)) \ B)$
 
 $\Gamma \vdash A \subset D $
 
 $\dfrac{\Gamma,a:A ~ m:D \ \vdash B \subset K }{\Gamma,a:A ~ m:D \ \vdash p \impliedby (\Pi \ ((m \ D)) \ K)}$
 
-The above rules specify that for one Pi expression to be a subtype of another, then their argument types and body types both have to be subtypes.
+The above rules specify that for one Pi expression to be a subtype of another, then their argument types and body types both have to be subtypes. This can more clearly be seen in the following [lines](https://github.com/mooddood235/PotentialPotato/blob/2ea22d0c472bc3649f8693f2145b7789587882ac/TypeChecking.rkt#L104C5-L111C81) of code. Here the lambda expression is being checked against a type, but due to the fact that the check function specifically checks for subtyping, this means that if the same lambda expression were to be passed in with a supertype and x bound to a supertype of A, then the lambda expression would successfully typecheck.
 
 Consider the following code to highlight this point:
 
