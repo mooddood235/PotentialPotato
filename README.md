@@ -15,7 +15,7 @@ a Potential Potato computer program with a type that represents that mathematica
 
 # Extended Features
 Potential Potato extends Pie with 3 main features. For an in-depth explanation of the extended features and how they work in Potential Potato, please see `Features.txt`.
-## Recursive Functions:
+## Recursive Functions
 Potential Potato allows programs to be constructed using recursive functions with some restrictions. 
 This means mathematical claims can be proven with recursive logic.
 ## Pattern Matching
