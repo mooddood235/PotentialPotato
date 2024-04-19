@@ -40,3 +40,7 @@ The entry point of the program is the `run` function found in `PotentialPotato.r
 - When a Potential Potato expression is evaluated, it is turned into a  meta-level Racket structure. All the structures can be found in `EvaluationStructs.rkt`.
 - Utility functions for specific logical constructs can be found in a suitably named file.
   - General utility functions are found in `GeneralUtils.rkt`.
+
+# Where To Learn More
+Potential Potato is based on the Pie programming language, which is based on [The Little Typer](https://mitpress.mit.edu/9780262536431/the-little-typer/). If you are interested in learning about
+dependant types, and how Potential Potato works under the hood, the book is highly recommended.
