@@ -19,7 +19,7 @@ Potential Potato extends Pie with 3 main features. For an in-depth explanation o
 Potential Potato allows programs to be constructed using recursive functions with some restrictions. 
 This means mathematical claims can be proven with recursive logic.
 ## Pattern Matching
-Potential Potato provides the ability to pattern match values as-well as types.
+Potential Potato provides the ability to pattern match values as-well as types. This allows mathematical claims to be proven using proof by cases.
 ## Universe Type Hierarchy
 Potential Potato provides an infinite hierarchy of "Universe" types. Every base type is of type $U_0$ and every $U_n$ is of type $U_{n+1}$.
 
