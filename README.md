@@ -14,7 +14,7 @@ type `T` is true if and only if a value can be constructed with type `T`. The re
 a Potential Potato computer program with a type that represents that mathematical claim.
 
 # Extended Features
-Potential Potato extends Pie with 3 main features. For an in-depth explanation of the extended features and how they work in Potential Potato, please see `Features.md`.
+Potential Potato extends Pie with 3 main features. For an in-depth explanation of the extended features and how they work in Potential Potato, please see [Features.md](https://github.com/mooddood235/PotentialPotato/blob/main/Features.md).
 ## Recursive Functions
 Potential Potato allows programs to be constructed using recursive functions with some restrictions. 
 This means mathematical claims can be proven with recursive logic.
