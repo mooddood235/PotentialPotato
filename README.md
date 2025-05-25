@@ -1,46 +1,128 @@
 # Potential Potato
-Potential Potato is a [dependently typed](https://en.wikipedia.org/wiki/Dependent_type) functional programming language based on the
-[Pie](https://github.com/the-little-typer/pie) programming language. It extends Pie with recursive functions, pattern matching, and a universe type hierarchy.
 
-# What Makes It Special?
-Potential Potato allows you to write mathematical proofs in the form of a computer program. Potential Potato checks whether your proof is correct, 
-and can check your proof against user input.
+[![Language](https://img.shields.io/badge/Language-Racket-blue.svg)](https://racket-lang.org/)
+[![Type System](https://img.shields.io/badge/Type%20System-Dependent-green.svg)](https://en.wikipedia.org/wiki/Dependent_type)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-# How Does It Work?
-Potential Potato interprets types in computer programs as mathematical claims. For instance, the type signature `A->B` for a function `f` means $A$ implies $B$. 
-Complex claims, like those with universal quantifiers, are represented by special types. Potential Potato allows you to prove a claim (represented by a type)
-by constructing a value that has that type. This works because the types in Potential Potato exhibit behaviour such that a claim represented by a
-type `T` is true if and only if a value can be constructed with type `T`. The result is that a mathematical claim can be proven by constructing
-a Potential Potato computer program with a type that represents that mathematical claim.
+> A dependently typed functional programming language with recursive functions, pattern matching, and universe type hierarchy
 
-# Extended Features
-Potential Potato extends Pie with 3 main features. For an in-depth explanation of the extended features and how they work in Potential Potato, please see [Features.md](https://github.com/mooddood235/PotentialPotato/blob/main/Features.md).
-## Recursive Functions
-Potential Potato allows programs to be constructed using recursive functions with some restrictions. 
-This means mathematical claims can be proven with recursive logic.
-## Pattern Matching
-Potential Potato provides the ability to pattern match values as-well as types. This allows mathematical claims to be proven using proof by cases.
-## Universe Type Hierarchy
-Potential Potato provides an infinite hierarchy of "Universe" types. Every base type is of type $U_0$ and every $U_n$ is of type $U_{n+1}$.
+Potential Potato is an advanced dependently typed functional programming language that extends the [Pie language](https://github.com/the-little-typer/pie) with powerful features for mathematical proof construction and verification. Built on solid type-theoretic foundations, it enables developers to write programs that are simultaneously executable code and mathematical proofs.
 
-# How To Get Started
-The entry point of the program is the `run` function found in `PotentialPotato.rkt`. It takes as an argument the program you want to run.
+## Key Features
 
-# Code Base Structure
-- Potential Potato's starting point is `run` which is found in `PotentialPotato.rkt`. `run` calls top level functions in order to type check the entire program, modify the program's context, evaluate and normalize expressions, and print to the screen.
-- Type checking functions are found in `TypeChecking.rkt`. 
-  - `synth` is the type synthesizer.
-  - `check` is the type checker.
-- Evaluation and normalization logic is closely related. Hence, both can be found in `Evaluation.rkt`.
-  - `val` is the evaluator. 
-    - Every expression has its own evaluator that starts with prefix `do-`. For example, ind-Lists's evaluator is called `do-ind-List`. 
-    - Given an expression `e`, `val` decides which evaluater should be used on `e`.
-  - `read-back-norm` is the normalizer.
-  - `read-back-neutral` is the normalizer for neutral expressions. It is closely linked with `read-back-norm`.
-- When a Potential Potato expression is evaluated, it is turned into a  meta-level Racket structure. All the structures can be found in `EvaluationStructs.rkt`.
-- Utility functions for specific logical constructs can be found in a suitably named file.
-  - General utility functions are found in `GeneralUtils.rkt`.
+### **Curry-Howard Correspondence**
+- Types represent mathematical propositions
+- Programs serve as constructive proofs
+- Automatic proof verification through type checking
 
-# Where To Learn More
-Potential Potato is based on the Pie programming language, which is based on [The Little Typer](https://mitpress.mit.edu/9780262536431/the-little-typer/). If you are interested in learning about
-dependant types, and how Potential Potato works under the hood, the book is highly recommended.
+### **Advanced Type System**
+- **Dependent Types**: Types that depend on values, enabling precise specifications
+- **Universe Hierarchy**: Infinite hierarchy of type universes (U₀, U₁, U₂, ...) preventing paradoxes
+- **Subtype Relations**: Sophisticated subtyping with contravariant/covariant rules
+
+### **Pattern Matching & Recursion**
+- **Structural Pattern Matching**: Decompose data with wildcard variables (`!x`) and structural patterns
+- **Termination-Guaranteed Recursion**: Recursive functions with structural decreasing arguments
+- **Proof by Cases**: Mathematical case analysis through pattern matching
+
+## Architecture
+
+### Core Components
+
+| Module | Responsibility |
+|--------|----------------|
+| `TypeChecking.rkt` | Bidirectional type checking with synthesis (`synth`) and checking (`check`) |
+| `Evaluation.rkt` | Expression evaluation (`val`) and normalization (`read-back-norm`) |
+| `EvaluationStructs.rkt` | Meta-level Racket structures for evaluated expressions |
+| `UniverseUtils.rkt` | Universe type hierarchy and subtyping relations |
+| `PotentialPotato.rkt` | Main entry point with `run` function |
+
+### Type System Design
+
+```
+Γ ⊢ e ⟹ T    (Type Synthesis)
+Γ ⊢ e ⟸ T    (Type Checking)
+```
+
+The implementation uses **bidirectional type checking** with separate synthesis and checking judgments, enabling precise type inference while maintaining decidability.
+
+## Language Examples
+
+### Recursive Function Definition
+```racket
+(define rec-factorial
+  (the (Pi ((n Nat)) Nat)
+    (lambda (n)
+      (match Nat Nat n
+        [zero (add1 zero)]
+        [(add1 !k) (mult n (rec-factorial !k))]))))
+```
+
+### Pattern Matching with Wildcards
+```racket
+(match (List Nat) Nat my-list
+  [nil zero]
+  [(:: !head !tail) !head])
+```
+
+### Universe Hierarchy
+```racket
+;; Nat : (U zero)
+;; (U zero) : (U (add1 zero))
+;; (U (add1 zero)) : (U (add1 (add1 zero)))
+(define type-of-types (the (U (add1 zero)) (U zero)))
+```
+
+## Getting Started
+
+### Prerequisites
+- [Racket](https://racket-lang.org/) (version 8.0 or higher)
+
+### Installation & Usage
+```bash
+git clone https://github.com/mooddood235/PotentialPotato.git
+cd PotentialPotato
+racket PotentialPotato.rkt
+```
+
+### Running Your First Program
+```racket
+;; In PotentialPotato.rkt, modify the run function call:
+(run '(the Nat (add1 (add1 zero))))
+```
+
+## Use Cases
+
+### Mathematical Proof Verification
+Write constructive proofs of mathematical theorems that are automatically verified by the type checker.
+
+### Certified Programming
+Develop programs with strong correctness guarantees through dependent types and formal specifications.
+
+### Type Theory Research
+Experiment with advanced type system features including universe hierarchies and dependent pattern matching.
+
+### Educational Tool
+Learn about the deep connections between logic, mathematics, and computation through the Curry-Howard correspondence.
+
+## Theoretical Foundations
+
+Potential Potato is grounded in:
+- **Martin-Löf Type Theory**: Constructive type theory with dependent types
+- **Curry-Howard Correspondence**: Isomorphism between propositions and types
+- **Structural Recursion**: Termination guaranteed through decreasing structural arguments
+- **Universe Polymorphism**: Predicative hierarchy avoiding Russell's paradox
+
+## Contributing
+
+Contributions are welcome! Areas of particular interest:
+- Additional built-in data types and eliminators
+- Performance optimizations in evaluation
+- Extended pattern matching features
+- Better error messages and debugging tools
+
+## Further Reading
+
+- [The Little Typer](https://mitpress.mit.edu/9780262536431/the-little-typer/) - Foundational text for understanding dependent types
+- [Type Theory and Formal Proof](https://www.cambridge.org/core/books/type-theory-and-formal-proof/0472640AAD34E045C7F140B46A57A67C) - Comprehensive treatment of type theory
+- [Dependent Types at Work](http://www.cse.chalmers.se/~peterd/papers/DependentTypesAtWork.pdf) - Practical applications of dependent types
