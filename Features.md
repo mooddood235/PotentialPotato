@@ -1,6 +1,6 @@
 # Advanced Features of Potential Potato
 
-This document provides a comprehensive technical overview of Potential Potato's extended features beyond the base Pie language. These additions enable sophisticated mathematical reasoning and proof construction while maintaining type safety and termination guarantees.
+This document provides a comprehensive technical overview of Potential Potato's extended features beyond the base Pie language. These additions enable mathematical reasoning and proof construction while maintaining type safety and termination guarantees.
 
 ## Table of Contents
 
@@ -288,8 +288,6 @@ The subtyping checker performs structural comparison:
 
 ## Integration and Soundness
 
-These advanced features integrate seamlessly while maintaining the theoretical properties essential for a dependently typed language:
-
 ### **Type Safety**
 All operations preserve typing judgments, preventing runtime type errors.
 
@@ -306,5 +304,3 @@ Despite advanced features, type checking remains decidable through careful restr
 Programs serve as constructive proofs, maintaining the Curry-Howard correspondence.
 
 ---
-
-*This technical documentation demonstrates the sophisticated type-theoretic foundations underlying Potential Potato's advanced features, showcasing both theoretical rigor and practical applicability.*
