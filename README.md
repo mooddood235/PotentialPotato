@@ -7,12 +7,11 @@
 
 Potential Potato is a dependently typed functional programming language that extends the [Pie language](https://github.com/the-little-typer/pie) with features for mathematical proof construction and verification.
 
-### **Type System**
-- **Dependent Types**: Types that depend on values, enabling precise specifications
+### Type System
 - **Universe Hierarchy**: Infinite hierarchy of type universes (U₀, U₁, U₂, ...) preventing paradoxes
 - **Subtype Relations**: Subtyping with contravariant/covariant rules
 
-### **Pattern Matching & Recursion**
+### Pattern Matching & Recursion
 - **Structural Pattern Matching**: Decompose data with wildcard variables (`!x`) and structural patterns
 - **Termination-Guaranteed Recursion**: Recursive functions with structural decreasing arguments
 - **Proof by Cases**: Mathematical case analysis through pattern matching
