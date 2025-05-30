@@ -59,8 +59,7 @@ See [Features](https://github.com/mooddood235/PotentialPotato/blob/main/Features
 
 ## Getting Started
 
-### Prerequisites
-- [Racket](https://racket-lang.org/) (version 8.0 or higher)
+> Requires [Racket](https://racket-lang.org/) (version 8.0 or higher)
 
 ### Installation & Usage
 ```bash
