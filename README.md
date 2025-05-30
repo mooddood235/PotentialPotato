@@ -20,7 +20,7 @@ Potential Potato is a dependently typed functional programming language that ext
 - **Termination-Guaranteed Recursion**: Recursive functions with structural decreasing arguments
 - **Proof by Cases**: Mathematical case analysis through pattern matching
 
-See [Features](https://github.com/the-little-typer/pie)
+See [Features](https://github.com/mooddood235/PotentialPotato/blob/main/Features.md)
 
 ## Architecture
 
