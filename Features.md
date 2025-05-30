@@ -285,22 +285,3 @@ The subtyping checker performs structural comparison:
 4. **Neutral Type Handling**: Conservative approximation for undetermined types
 
 ---
-
-## Integration and Soundness
-
-### **Type Safety**
-All operations preserve typing judgments, preventing runtime type errors.
-
-### **Termination**
-Recursive functions are guaranteed to terminate through structural restrictions.
-
-### **Consistency**
-The universe hierarchy prevents paradoxes like Russell's paradox.
-
-### **Decidable Type Checking**
-Despite advanced features, type checking remains decidable through careful restriction of dependent types.
-
-### **Proof Relevance**
-Programs serve as constructive proofs, maintaining the Curry-Howard correspondence.
-
----
