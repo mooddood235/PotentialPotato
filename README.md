@@ -7,8 +7,6 @@
 
 Potential Potato is a dependently typed functional programming language that extends the [Pie language](https://github.com/the-little-typer/pie) with features for mathematical proof construction and verification.
 
-## Key Features
-
 ### **Type System**
 - **Dependent Types**: Types that depend on values, enabling precise specifications
 - **Universe Hierarchy**: Infinite hierarchy of type universes (U₀, U₁, U₂, ...) preventing paradoxes
