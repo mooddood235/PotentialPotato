@@ -6,19 +6,14 @@
 
 > A dependently typed functional programming language with recursive functions, pattern matching, and universe type hierarchy
 
-Potential Potato is an advanced dependently typed functional programming language that extends the [Pie language](https://github.com/the-little-typer/pie) with powerful features for mathematical proof construction and verification. Built on solid type-theoretic foundations, it enables developers to write programs that are simultaneously executable code and mathematical proofs.
+Potential Potato is a dependently typed functional programming language that extends the [Pie language](https://github.com/the-little-typer/pie) with features for mathematical proof construction and verification. Built on type-theoretic foundations, it enables developers to write programs that are simultaneously executable code and mathematical proofs.
 
 ## Key Features
 
-### **Curry-Howard Correspondence**
-- Types represent mathematical propositions
-- Programs serve as constructive proofs
-- Automatic proof verification through type checking
-
-### **Advanced Type System**
+### ** Type System**
 - **Dependent Types**: Types that depend on values, enabling precise specifications
 - **Universe Hierarchy**: Infinite hierarchy of type universes (U₀, U₁, U₂, ...) preventing paradoxes
-- **Subtype Relations**: Sophisticated subtyping with contravariant/covariant rules
+- **Subtype Relations**: Subtyping with contravariant/covariant rules
 
 ### **Pattern Matching & Recursion**
 - **Structural Pattern Matching**: Decompose data with wildcard variables (`!x`) and structural patterns
@@ -44,7 +39,7 @@ Potential Potato is an advanced dependently typed functional programming languag
 Γ ⊢ e ⟸ T    (Type Checking)
 ```
 
-The implementation uses **bidirectional type checking** with separate synthesis and checking judgments, enabling precise type inference while maintaining decidability.
+The implementation uses **bidirectional type checking** with separate synthesis and checking judgments, enabling type inference while maintaining decidability.
 
 ## Language Examples
 
@@ -90,20 +85,6 @@ racket PotentialPotato.rkt
 ;; In PotentialPotato.rkt, modify the run function call:
 (run '(the Nat (add1 (add1 zero))))
 ```
-
-## Use Cases
-
-### Mathematical Proof Verification
-Write constructive proofs of mathematical theorems that are automatically verified by the type checker.
-
-### Certified Programming
-Develop programs with strong correctness guarantees through dependent types and formal specifications.
-
-### Type Theory Research
-Experiment with advanced type system features including universe hierarchies and dependent pattern matching.
-
-### Educational Tool
-Learn about the deep connections between logic, mathematics, and computation through the Curry-Howard correspondence.
 
 ## Theoretical Foundations
 
