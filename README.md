@@ -33,15 +33,6 @@ See [Features](https://github.com/mooddood235/PotentialPotato/blob/main/Features
 | `UniverseUtils.rkt` | Universe type hierarchy and subtyping relations |
 | `PotentialPotato.rkt` | Main entry point with `run` function |
 
-### Type System Design
-
-```
-Γ ⊢ e ⟹ T    (Type Synthesis)
-Γ ⊢ e ⟸ T    (Type Checking)
-```
-
-The implementation uses **bidirectional type checking** with separate synthesis and checking judgments, enabling type inference while maintaining decidability.
-
 ## Language Examples
 
 ### Recursive Function Definition
