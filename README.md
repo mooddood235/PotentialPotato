@@ -2,7 +2,6 @@
 
 [![Language](https://img.shields.io/badge/Language-Racket-blue.svg)](https://racket-lang.org/)
 [![Type System](https://img.shields.io/badge/Type%20System-Dependent-green.svg)](https://en.wikipedia.org/wiki/Dependent_type)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 > A dependently typed functional programming language with recursive functions, pattern matching, and universe type hierarchy
 
