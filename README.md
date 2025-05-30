@@ -86,14 +86,6 @@ Potential Potato is grounded in:
 - **Structural Recursion**: Termination guaranteed through decreasing structural arguments
 - **Universe Polymorphism**: Predicative hierarchy avoiding Russell's paradox
 
-## Contributing
-
-Contributions are welcome! Areas of particular interest:
-- Additional built-in data types and eliminators
-- Performance optimizations in evaluation
-- Extended pattern matching features
-- Better error messages and debugging tools
-
 ## Further Reading
 
 - [The Little Typer](https://mitpress.mit.edu/9780262536431/the-little-typer/) - Foundational text for understanding dependent types
