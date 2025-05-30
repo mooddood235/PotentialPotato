@@ -76,14 +76,6 @@ racket PotentialPotato.rkt
 (run '(the Nat (add1 (add1 zero))))
 ```
 
-## Theoretical Foundations
-
-Potential Potato is grounded in:
-- **Martin-Löf Type Theory**: Constructive type theory with dependent types
-- **Curry-Howard Correspondence**: Isomorphism between propositions and types
-- **Structural Recursion**: Termination guaranteed through decreasing structural arguments
-- **Universe Polymorphism**: Predicative hierarchy avoiding Russell's paradox
-
 ## Further Reading
 
 - [The Little Typer](https://mitpress.mit.edu/9780262536431/the-little-typer/) - Foundational text for understanding dependent types
