@@ -283,5 +283,3 @@ The subtyping checker performs structural comparison:
 2. **Function Comparison**: Contravariant parameter, covariant return
 3. **Constructor Comparison**: Covariant in all type arguments
 4. **Neutral Type Handling**: Conservative approximation for undetermined types
-
----
