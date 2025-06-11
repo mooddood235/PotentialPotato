@@ -11,7 +11,7 @@ Potential Potato is a dependently typed functional programming language that ext
 - **Universe Hierarchy**: Infinite hierarchy of type universes (U₀, U₁, U₂, ...) preventing paradoxes
 - **Subtype Relations**: Subtyping with contravariant/covariant rules
 
-### Pattern Matching & Recursion
+### Pattern Matching and Recursion
 - **Structural Pattern Matching**: Decompose data with wildcard variables (`!x`) and structural patterns
 - **Termination-Guaranteed Recursion**: Recursive functions with structural decreasing arguments
 - **Proof by Cases**: Mathematical case analysis through pattern matching
