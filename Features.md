@@ -13,8 +13,6 @@ This document provides a comprehensive technical overview of Potential Potato's 
 
 ## Pattern Matching
 
-Pattern matching in Potential Potato provides a powerful mechanism for structural decomposition and proof by cases, essential for mathematical reasoning over inductively defined types.
-
 ### Core Mechanism
 
 ```racket
