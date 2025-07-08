@@ -1,20 +1,18 @@
 # Potential Potato
 
 [![Language](https://img.shields.io/badge/Language-Racket-blue.svg)](https://racket-lang.org/)
-[![Type System](https://img.shields.io/badge/Type%20System-Dependent-green.svg)](https://en.wikipedia.org/wiki/Dependent_type)
 
-> A dependently typed functional programming language with recursive functions, pattern matching, and universe type hierarchy
+Potential Potato is a dependently typed functional programming language that extends the [Pie language](https://github.com/the-little-typer/pie) with additional features for mathematical proof construction and verification.
 
-Potential Potato is a dependently typed functional programming language that extends the [Pie language](https://github.com/the-little-typer/pie) with features for mathematical proof construction and verification.
-
+## Additional Features
 ### Type System
-- **Universe Hierarchy**: Infinite hierarchy of type universes (U₀, U₁, U₂, ...)
-- **Subtype Relations**: Subtyping with contravariant/covariant rules
+- Universe Hierarchy: Infinite hierarchy of type universes (U₀, U₁, U₂, ...)
+- Subtype Relations: Subtyping with contravariant/covariant rules
 
 ### Pattern Matching and Recursion
-- **Structural Pattern Matching**: Decompose data with wildcard variables (`!x`) and structural patterns
-- **Termination-Guaranteed Recursion**: Recursive functions with structural decreasing arguments
-- **Proof by Cases**: Mathematical case analysis through pattern matching
+- Structural Pattern Matching: Decompose data with wildcard variables (`!x`) and structural patterns
+- Termination-Guaranteed Recursion: Recursive functions with structural decreasing arguments
+- Proof by Cases: Case analysis through pattern matching
 
 See [Features](https://github.com/mooddood235/PotentialPotato/blob/main/Features.md)
 
@@ -78,4 +76,3 @@ racket PotentialPotato.rkt
 
 - [The Little Typer](https://mitpress.mit.edu/9780262536431/the-little-typer/) - Foundational text for understanding dependent types
 - [Type Theory and Formal Proof](https://www.cambridge.org/core/books/type-theory-and-formal-proof/0472640AAD34E045C7F140B46A57A67C) - Comprehensive treatment of type theory
-- [Dependent Types at Work](http://www.cse.chalmers.se/~peterd/papers/DependentTypesAtWork.pdf) - Practical applications of dependent types
